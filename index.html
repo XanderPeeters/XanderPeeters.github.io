@@ -35,7 +35,6 @@
             padding: 10px;
             box-sizing: border-box;
             text-align: left; /* Align text to the left */
-            overflow-y: auto;
         }
 
         .pointer {
@@ -45,16 +44,35 @@
             z-index: 1000;
          }
 
-         .popup {
+        .legend {
             position: absolute;
-            background-color: white;
+            bottom: 40px;
+            left: 310px;
+            background-color: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ccc;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .popup2 {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 2000;
-            top: 20px;
-            right: 20px;
+            bottom: 35px;
+            right: 10px;
+            width: 200px;
+            height: 300px;
+            overflow: scroll;
+            max-height: 300px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
         }
 
         .control-box {
@@ -85,11 +103,234 @@
         .control-box button:hover {
             background-color: #0056b3; /* Darker blue on hover */
         }
+
+        /* Modal styles */
+        .modal {
+            display: none; /* Hide the modal by default */
+            position: fixed; /* Position the modal */
+            z-index: 1000; /* Set a high z-index to ensure it's above other elements */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Black background with transparency */
+        }
+
+        /* Modal content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* Center modal vertically and horizontally */
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            max-width: 600px; /* Set maximum width of the modal */
+        }
+
+        /* Close button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #logButtonContainer {
+            position: absolute;
+            top: 10px; /* Adjust as needed */
+            right: 10px; /* Adjust as needed */
+            z-index: 1000; /* Ensure it's above other elements */
+        }
+
+        #logButton {
+            width: 100px; /* Adjust width as needed */
+            padding: 8px; /* Adjust padding as needed */
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+            border-radius: 5px; /* Rounded corners */
+            font-size: 16px; /* Adjust font size as needed */
+        }
+
+        #logButton:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+         #logModal .modal-content input[type="date"] {
+            margin-bottom: 20px; /* Adjust the value as needed */
+         }
+
+         #logModal .modal-content table {
+            width: 100%;
+         }
+
+        .control-box {
+            margin-bottom: 10px;
+        }
+
+        .control-box label {
+            display: block; /* Each label on a new line */
+            margin-bottom: 5px; /* Add space between labels */
+            font-weight: bold; /* Make label text bold */
+        }
+
+        .control-box input[type="text"],
+        .control-box input[type="range"],
+        .control-box button {
+            width: 100%; /* Take up full width */
+            padding: 5px; /* Add padding */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .control-box button {
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+        }
+
+        .control-box button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        /* Styles for buttons inside logModal */
+        #logModal .modal-content button {
+            width: auto;
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        #logModal .modal-content button:hover {
+            background-color: #0056b3;
+        }
+
+        #logModal .modal-content .close:hover,
+        #logModal .modal-content .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Style for page navigation buttons */
+        .pagination button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            padding: 8px 16px;
+            margin: 0 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .pagination button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Style for current page navigation button */
+        .pagination button.current-page {
+            background-color: #0056b3; /* Use the same color as hover effect */
+            color: white; /* Make text color white for better visibility */
+            font-weight: bold;
+        }
+
+        .pagination button.active {
+            background-color: #0056b3 !important;
+            border: 1px solid #007bff !important;
+        }
+
+        /* Style for disabled page navigation buttons */
+        .pagination button.disabled {
+            background-color: #ddd;
+            color: #999;
+            cursor: not-allowed;
+        }
+
     </style>
 </head>
 <body>
-<div id="popup" class="popup"></div>
+<div id="logButtonContainer">
+    <button id="logButton" onclick="openLogModal()">Log</button>
+</div>
+
+<!-- Modal -->
+<div id="logModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeLogModal()">&times;</span>
+        <h2>Log Data</h2>
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate">
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate">
+        <table id="logTable" border = "1">
+            <thead>
+                <tr>
+                    <th>Switch</th>
+                    <th>State</th>
+                    <th>User</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>S812</td>
+                    <td>Open</td>
+                    <td>EX1058</td>
+                    <td>17/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S813</td>
+                    <td>Open</td>
+                    <td>Ex1058</td>
+                    <td>13/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S715</td>
+                    <td>Closed</td>
+                    <td>EX1057</td>
+                    <td>07/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S716</td>
+                    <td>Open</td>
+                    <td>EX1093</td>
+                    <td>30/03/2024</td>
+                </tr>
+                <tr>
+                    <td>S723</td>
+                    <td>Closed</td>
+                    <td>EX1102</td>
+                    <td>22/03/2024</td>
+                </tr>
+                <tr>
+                    <td>S596</td>
+                    <td>Closed</td>
+                    <td>EX1058</td>
+                    <td>18/03/2024</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div id="controls">
+    <div class="control-box">
+        <img src="https://github.com/XanderPeeters/Schakelboekje/blob/master/De_Lijn.svg.png?raw=true" alt="De Lijn logo" width="75" height="auto" onclick="reloadPage()">
+    </div>
     <div class="control-box">
         <label for="visible0">Kaart:</label>
         <input id="visible0" class="visible" type="checkbox" checked/>
@@ -123,6 +364,15 @@
     </div>
 </div>
 <div id="map"></div>
+<div id="popup2" class="popup2" style="display: none;"></div>
+<div class="legend">
+    <label>Legende:</label>
+    <div>
+        <i class="fas fa-dot-circle" style="color: red;"></i> <span style="color: red;">Gesloten</span><br>
+        <i class="fas fa-dot-circle" style="color: green;"></i> <span style="color: green;">Open</span>
+    </div>
+</div>
+
 
 <script>
     let map;
@@ -170,10 +420,10 @@
     const view = new ol.View({
         center: center,
         zoom: 13,
-        extent: extent // Set the extentt
+        extent: extent // Set the extent
     });
 
-    let popupDisplayed = false;
+    let pinClicked = false;
     let drawingModeActive = false;
     let drawnFeaturesSource = new ol.source.Vector(); // Source to hold drawn features
     let drawnFeaturesLayer = new ol.layer.Vector({ // Layer to display drawn features
@@ -202,15 +452,6 @@
     });
     map.addOverlay(pointerOverlay);
 
-    const popupElement = document.getElementById('popup');
-    const popupOverlay = new ol.Overlay({
-        element: popupElement,
-        positioning: 'top-right',
-        offset: [0, -10],
-        stopEvent: false
-    });
-    map.addOverlay(popupOverlay);
-
     function toggleDrawing() {
         if (drawingModeActive) {
             // Clear previously drawn features if exiting drawing mode
@@ -222,20 +463,27 @@
             drawnFeaturesSource.clear();
             document.getElementById('tekenButton').style.backgroundColor = 'green';
             initDrawingInteraction();
+
         }
         drawingModeActive = !drawingModeActive;
     }
 
     function initDrawingInteraction() {
+        if (!drawnFeaturesSource || !vectorLayer2 || !map) {
+            console.error('Missing required sources or map.');
+            return;
+        }
+
         draw = new ol.interaction.Draw({
             source: drawnFeaturesSource,
             type: 'Polygon',
         });
         map.addInteraction(draw);
 
-        draw.on('drawend', function(event) {
+        draw.on('drawend', async function(event) {
             // Clear previous polygon
             drawnFeaturesSource.clear();
+
 
             // Lock the current polygon
             const polygonFeature = event.feature;
@@ -255,30 +503,49 @@
             drawnFeaturesSource.addFeature(polygonFeature);
 
             // Perform spatial query against features in Layer 2
-            const intersectingFeatures = [];
-            vectorLayer2.getSource().forEachFeature(function(feature) {
+            const intersectingFeatures = new Set();
+            const polygonExtent = polygonGeometry.getExtent();
+
+            const features = vectorLayer2.getSource().getFeatures();
+            await Promise.all(features.map(async (feature) => {
                 const featureGeometry = feature.getGeometry();
-                if (featureGeometry.intersectsPolygon(polygonGeometry)) {
-                    intersectingFeatures.push(feature);
-                }
-            });
-            // Display popup with information about intersecting features
-            if (intersectingFeatures.length > 0) {
-                const popupContent = intersectingFeatures.map(function(feature) {
+                const featureExtent = featureGeometry.getExtent();
+                if (ol.extent.intersects(polygonExtent, featureExtent)) {
                     const layerName = feature.get('LAYER');
-                    const lonLat = ol.proj.toLonLat(feature.getGeometry().getCoordinates());
-                    const lon = lonLat[0];
-                    const lat = lonLat[1];
-                    return `<p>Layer: ${layerName}</p><p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
+                    const vValue = layerName;
+                    const sValue = await findSValue(vValue);
+                    const edgeFeedersSet = findEdgeFeeders(layerName); // Call the function to find edge feeders
+                    const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
+                    let layerData = { layerName: layerName, edgeFeeders: edgeFeeders, Switches: sValue };
+                    let isNewLayer = true;
+                    for (let data of intersectingFeatures) {
+                        if (data.layerName === layerName) {
+                            isNewLayer = false;
+                            break;
+                        }
+                    }
+                    if (isNewLayer) {
+                        intersectingFeatures.add(layerData);
+                    }
+                }
+            }));
+
+            // Display popup with information about intersecting features
+            handlePinClick();
+            const popup2Element = document.querySelector('.popup2');
+            if (intersectingFeatures.size > 0) {
+                const popupContent = Array.from(intersectingFeatures).map(function(data) {
+                    const feederName = data.layerName;
+                    const edgeFeeders = data.edgeFeeders;
+                    const switches = data.Switches
+                    return `<h4 style="margin-top: 0;">Location information:</h4><p>Main feeder: ${feederName}</p><p>Edge feeders: ${edgeFeeders}</p><p>Switches: ${switches}</p><p>Feeders to turn of: </p>`;
                 }).join('<hr>'); // Separate feature information with horizontal line
-                popupElement.innerHTML = popupContent;
-                const centroid = polygonGeometry.getInteriorPoint().getCoordinates(); // Get the centroid of the polygon
-                const popupPosition = ol.proj.fromLonLat(centroid);
-                popupOverlay.setPosition(popupPosition);
+                popup2Element.innerHTML = popupContent;
+
             } else {
                 // If no intersecting features, display a message
-                popupElement.innerHTML = '<p>No features found in the drawn area.</p>';
-                popupOverlay.setPosition(undefined); // Hide popup
+                popup2Element.innerHTML = '<p>No features found in the drawn area.</p>';
+                popup2Element.style.display = 'none';
             }
 
             // Clear the drawing interaction (but keep it active)
@@ -287,42 +554,64 @@
     }
 
     map.on('click', async function(event) {
-        if(drawingModeActive) {
-            //No functionality yet
-        } else {
-            const coordinates = event.coordinate;
-            const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'); // Correct variable name
-            let closestFeature = null;
-            let closestDistance = Infinity;
-            vectorLayer2.getSource().forEachFeature(function(feature) {
-                const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
-                const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
-                const distance = ol.sphere.getDistance(transfcoordinates, featureCoords);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestFeature = feature;
-                }
-            });
-
-            if (closestFeature) {
-                const closestFeatureName = closestFeature.get('LAYER');
-                const lon = transfcoordinates[0];
-                const lat = transfcoordinates[1];
-                const vValue = closestFeatureName; // Example value, replace this with the actual V-value of the closest feature
-                const sValue = await findSValue(vValue);
-                const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p><p>Closest Feature: ${closestFeatureName}</p><p>S-value: ${sValue}</p>`;
-                popupElement.innerHTML = content;
-                popupOverlay.setPosition(coordinates);
-            } else {
-                const lon = transfcoordinates[0];
-                const lat = transfcoordinates[1];
-                const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
-                popupElement.innerHTML = content;
-                popupOverlay.setPosition(coordinates);
+    if(drawingModeActive) {
+        //No functionality yet
+    } else {
+        handlePinClick();
+        const popup2Element = document.querySelector('.popup2');
+        const coordinates = event.coordinate;
+        const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'); // Correct variable name
+        let closestFeature = null;
+        let closestDistance = Infinity;
+        vectorLayer2.getSource().forEachFeature(function(feature) {
+            const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
+            const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
+            const distance = ol.sphere.getDistance(transfcoordinates, featureCoords);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestFeature = feature;
             }
+        });
 
-            pointerOverlay.setPosition(coordinates);
+        if (closestFeature) {
+            const closestFeatureName = closestFeature.get('LAYER');
+            const lon = transfcoordinates[0];
+            const lat = transfcoordinates[1];
+            const vValue = closestFeatureName;
+            const sValue = await findSValue(vValue);
+            const edgeFeedersSet = findEdgeFeeders(closestFeatureName); // Call the function to find edge feeders
+            const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
+            const content = `<h4 style="margin-top: 0;">Location information:</h4> <p>Main feeder: ${closestFeatureName}</p> <p> Edge feeders: ${edgeFeeders.join(', ')}</p> <p>Switches: ${sValue}</p> <p> Feeders to turn off: </p>`;
+            popup2Element.innerHTML = content;
+        } else {
+            const lon = transfcoordinates[0];
+            const lat = transfcoordinates[1];
+            const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
+            popupElement2.innerHTML = content;
         }
+
+        pointerOverlay.setPosition(coordinates);
+    }
+});
+
+    // Function to handle the pin click event
+    function handlePinClick() {
+        pinClicked = true;
+        const popup2Element = document.getElementById('popup2');
+        if (pinClicked) {
+            popup2Element.style.display = 'block';
+        } else {
+            popup2Element.style.display = 'none';
+        }
+    }
+
+
+
+    // Add a click event listener to the pin element
+    pointerElement.addEventListener('click', function(event) {
+        // Prevent the singleclick event on the map from firing
+        event.stopPropagation();
+        handlePinClick();
     });
 
     map.on('dblclick', function(event) {
@@ -337,6 +626,14 @@
             // Finish drawing on right-click
             event.preventDefault();
             draw.finishDrawing();
+
+        } else {
+           // Prevent the default context menu from appearing
+           event.preventDefault();
+           // Hide the pointer
+           pointerOverlay.setPosition(undefined);
+           const popup2Element = document.getElementById('popup2');
+           popup2Element.style.display = 'none';
         }
     });
     map.addLayer(drawnFeaturesLayer);
@@ -375,13 +672,169 @@
         });
     };
 
+   document.addEventListener('DOMContentLoaded', function () {
+        const logTable = document.getElementById('logTable');
+        const rows = logTable.getElementsByTagName('tr');
+        const itemsPerPage = 2; // Adjust as needed
+        let currentPage = 0;
+
+        // Show the header row
+        rows[0].style.display = 'table-row';
+
+        function showPage(page) {
+            const startIndex = page * itemsPerPage + 1; // Start from index 1 to skip the header roww
+            const endIndex = Math.min(startIndex + itemsPerPage, rows.length);
+
+            for (let i = 1; i < rows.length; i++) { // Start from index 1 to skip the header row
+                if (i >= startIndex && i < endIndex) {
+                    rows[i].style.display = 'table-row';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+
+            // Update the showing items text
+            const showingItemsText = document.getElementById('showingItemsText');
+            if (showingItemsText) {
+                const firstItemIndex = startIndex;
+                const lastItemIndex = Math.min(endIndex - 1, rows.length - 1); // Exclude header row
+                showingItemsText.textContent = `Showing item ${firstItemIndex} - ${lastItemIndex} from ${rows.length - 1} items`;
+            }
+
+            // Update active state of page buttons
+            updateActiveButtonState();
+        }
+
+        function navigateToPage(page) {
+            currentPage = page;
+            showPage(currentPage);
+        }
+
+        function setupPagination() {
+            const pageCount = Math.ceil((rows.length - 1) / itemsPerPage); // Exclude header row
+
+            // Create pagination container
+            const paginationContainer = document.createElement('div');
+            paginationContainer.className = 'pagination';
+
+            // First page button
+            const firstPageButton = document.createElement('button');
+            firstPageButton.textContent = '<<';
+            firstPageButton.addEventListener('click', function () {
+                navigateToPage(0);
+            });
+            paginationContainer.appendChild(firstPageButton);
+
+            // Previous page button
+            const prevPageButton = document.createElement('button');
+            prevPageButton.textContent = '<';
+            prevPageButton.addEventListener('click', function () {
+                navigateToPage(Math.max(0, currentPage - 1));
+            });
+            paginationContainer.appendChild(prevPageButton);
+
+            // Page number buttons
+            for (let i = 0; i < pageCount; i++) {
+                const button = document.createElement('button');
+                button.textContent = i + 1;
+                button.addEventListener('click', function () {
+                    navigateToPage(i);
+                });
+                paginationContainer.appendChild(button);
+            }
+
+            // Next page button
+            const nextPageButton = document.createElement('button');
+            nextPageButton.textContent = '>';
+            nextPageButton.addEventListener('click', function () {
+                navigateToPage(Math.min(pageCount - 1, currentPage + 1));
+            });
+            paginationContainer.appendChild(nextPageButton);
+
+            // Last page button
+            const lastPageButton = document.createElement('button');
+            lastPageButton.textContent = '>>';
+            lastPageButton.addEventListener('click', function () {
+                navigateToPage(pageCount - 1);
+            });
+            paginationContainer.appendChild(lastPageButton);
+
+            // Add pagination container after the table
+            logTable.insertAdjacentElement('afterend', paginationContainer);
+
+            // Create and append showing items text
+            const showingItemsText = document.createElement('div');
+            showingItemsText.id = 'showingItemsText';
+            showingItemsText.textContent = `Showing item 1 - ${Math.min(itemsPerPage, rows.length - 1)} from ${rows.length - 1} items`;
+            logTable.insertAdjacentElement('afterend', showingItemsText);
+
+            // Show the initial page
+            showPage(currentPage);
+        }
+
+        // Function to update active state of page buttons
+        function updateActiveButtonState() {
+            const pageButtons = document.querySelectorAll('.pagination button');
+            pageButtons.forEach((button, index) => {
+                if (index === currentPage + 2) { // Index + 2 as we have two additional buttons (<< and <)
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
+        // Initialize pagination
+        setupPagination();
+    });
+
+    function openLogModal() {
+        const modal = document.getElementById('logModal');
+        modal.style.display = 'block';
+        // Additional logic to fetch and populate the table data can be added here
+    }
+
+    // Function to close the log modal
+    function closeLogModal() {
+        const modal = document.getElementById('logModal');
+        modal.style.display = 'none';
+    }
+
+
+    function findEdgeFeeders(mainFeederName) {
+    const edgeFeedersSet = new Set();
+
+    // Find all instances of the main feeder
+    const mainFeederFeatures = [];
+    vectorLayer2.getSource().forEachFeature(function(feature) {
+        const featureName = feature.get('LAYER');
+        if (featureName === mainFeederName) {
+            mainFeederFeatures.push(feature);
+        }
+    });
+
+    // Iterate through main feeder instances and find intersecting edge feeders
+    mainFeederFeatures.forEach(function(mainFeederFeature) {
+        const mainFeederGeometry = mainFeederFeature.getGeometry();
+        vectorLayer2.getSource().forEachFeature(function(innerFeature) {
+            const innerFeatureName = innerFeature.get('LAYER');
+            if (innerFeatureName !== mainFeederName && mainFeederGeometry.intersectsExtent(innerFeature.getGeometry().getExtent())) {
+                edgeFeedersSet.add(innerFeatureName); // Add to the Set
+            }
+        });
+    });
+
+    return edgeFeedersSet;
+}
+
+
     // Create the first vector layer
     const vectorLayer1 = new ol.layer.Vector({
         source: geojsonSource1,
         style: geojsonStyle1
     });
 
-    // Add the first vector layer to the map
+    // Add the first vector layer to the mapp
     map.addLayer(vectorLayer1);
 
     // Load GeoJSON data for the second layer
@@ -496,7 +949,10 @@
 
     // Function to geocode an address and zoom to its location
     function geocodeAddress(address) {
-        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address);
+        const postalcode = '2000';
+        const city = 'Antwerpen';
+        const fullAddress = address + ', ' + city + ', ' + postalcode;
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(fullAddress);
         fetch(url)
             .then(function(response) {
                 return response.json();
@@ -513,6 +969,10 @@
             .catch(function(error) {
                 console.error('Error geocoding address:', error);
             });
+    }
+
+    function reloadPage() {
+        location.reload();
     }
 
     // Handle visibility for OSM layer
