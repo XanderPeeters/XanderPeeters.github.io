@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Map OpenLayers</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.4/xlsx.full.min.js"></script> <!-- Include SheetJS library -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 300px;
+            bottom: 30px;
+            width: calc(100% - 300px);
+        }
+
+
+        #logoAndEditorContainer {
+            display: flex; /* Use flexbox to align items horizontally */
+            align-items: center; /* Center items vertically */
+            margin-bottom: 10px; /* Add margin at the bottom */
+        }
+
+        #logoContainer,
+        #editorLoginContainer {
+            margin-right: 10px; /* Add margin between the logo and login button */
+        }
+
+
+        #editorLoginButton {
+            padding: 5px; /* Adjust padding */
+            font-size: 12px; /* Adjust font size */
+            height: 40px; /* Set the height to match the logo */
+            width: 100px;
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+            margin-left: 50px;
+        }
+
+        #controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: calc(100% - 40px);
+            width: 300px;
+            background-color: #f8f9fa; /* Light gray background */
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: left; /* Align text to the left */
+        }
+
+        .pointer {
+            font-size: 24px;
+            color: red;
+            position: absolute;
+            z-index: 1000;
+         }
+
+        .legend {
+            position: absolute;
+            bottom: 40px;
+            left: 310px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .popup2 {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            bottom: 35px;
+            right: 10px;
+            width: 200px;
+            height: 300px;
+            overflow: scroll;
+            max-height: 300px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        .control-box {
+            margin-bottom: 10px;
+        }
+
+        .control-box label {
+            display: block; /* Each label on a new line */
+            margin-bottom: 5px; /* Add space between labels */
+            font-weight: bold; /* Make label text bold */
+        }
+
+        .control-box input[type="text"],
+        .control-box input[type="range"],
+        .control-box button {
+            width: 100%; /* Take up full width */
+            padding: 5px; /* Add padding */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .control-box button {
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+        }
+
+        .control-box button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none; /* Hide the modal by default */
+            position: fixed; /* Position the modal */
+            z-index: 1000; /* Set a high z-index to ensure it's above other elements */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Black background with transparency */
+        }
+
+        /* Modal content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* Center modal vertically and horizontally */
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            max-width: 600px; /* Set maximum width of the modal */
+        }
+
+        /* Close button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #logButtonContainer {
+            position: absolute;
+            top: 10px; /* Adjust as needed */
+            right: 10px; /* Adjust as needed */
+            z-index: 1000; /* Ensure it's above other elements */
+        }
+
+        #logButton {
+            width: 100px; /* Adjust width as needed */
+            padding: 8px; /* Adjust padding as needed */
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+            border-radius: 5px; /* Rounded corners */
+            font-size: 16px; /* Adjust font size as needed */
+        }
+
+        #logButton:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+         #logModal .modal-content input[type="date"] {
+            margin-bottom: 20px; /* Adjust the value as needed */
+         }
+
+         #logModal .modal-content table {
+            width: 100%;
+         }
+
+        .control-box {
+            margin-bottom: 10px;
+        }
+
+        .control-box label {
+            display: block; /* Each label on a new line */
+            margin-bottom: 5px; /* Add space between labels */
+            font-weight: bold; /* Make label text bold */
+        }
+
+        .control-box input[type="text"],
+        .control-box input[type="range"],
+        .control-box button {
+            width: 100%; /* Take up full width */
+            padding: 5px; /* Add padding */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .control-box button {
+            background-color: #007bff; /* Blue button color */
+            color: white; /* White text color */
+            border: none; /* Remove border */
+            cursor: pointer; /* Add pointer cursor */
+        }
+
+        .control-box button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        /* Styles for buttons inside logModal */
+        #logModal .modal-content button {
+            width: auto;
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        #logModal .modal-content button:hover {
+            background-color: #0056b3;
+        }
+
+        #logModal .modal-content .close:hover,
+        #logModal .modal-content .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Style for page navigation buttons */
+        .pagination button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            padding: 8px 16px;
+            margin: 0 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .pagination button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Style for current page navigation button */
+        .pagination button.current-page {
+            background-color: #0056b3; /* Use the same color as hover effect */
+            color: white; /* Make text color white for better visibility */
+            font-weight: bold;
+        }
+
+        .pagination button.active {
+            background-color: #0056b3 !important;
+            border: 1px solid #007bff !important;
+        }
+
+        /* Style for disabled page navigation buttons */
+        .pagination button.disabled {
+            background-color: #ddd;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="logButtonContainer">
+    <button id="logButton" onclick="openLogModal()">Log</button>
+</div>
+
+<!-- Modal -->
+<div id="logModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeLogModal()">&times;</span>
+        <h2>Log Data</h2>
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate">
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate">
+        <table id="logTable" border = "1">
+            <thead>
+                <tr>
+                    <th>Switch</th>
+                    <th>State</th>
+                    <th>User</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>S812</td>
+                    <td>Open</td>
+                    <td>EX1058</td>
+                    <td>17/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S813</td>
+                    <td>Open</td>
+                    <td>Ex1058</td>
+                    <td>13/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S715</td>
+                    <td>Closed</td>
+                    <td>EX1057</td>
+                    <td>07/04/2024</td>
+                </tr>
+                <tr>
+                    <td>S716</td>
+                    <td>Open</td>
+                    <td>EX1093</td>
+                    <td>30/03/2024</td>
+                </tr>
+                <tr>
+                    <td>S723</td>
+                    <td>Closed</td>
+                    <td>EX1102</td>
+                    <td>22/03/2024</td>
+                </tr>
+                <tr>
+                    <td>S596</td>
+                    <td>Closed</td>
+                    <td>EX1058</td>
+                    <td>18/03/2024</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="controls">
+    <div class="control-box" id="logoAndEditorContainer">
+        <div id="logoContainer">
+            <img src="https://github.com/XanderPeeters/Schakelboekje/blob/master/De_Lijn.svg.png?raw=true" alt="De Lijn logo" width="75" height="auto" onclick="reloadPage()">
+        </div>
+        <div id="editorLoginContainer">
+            <button id="editorLoginButton" onclick="openEditorLoginPage()">User page</button>
+        </div>
+    </div>
+    <div class="control-box">
+        <label for="visible0">Kaart:</label>
+        <input id="visible0" class="visible" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="visible1">Sectie schakelaars:</label>
+        <input id="visible1" class="visible" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="visible2">Voedingen:</label>
+        <input id="visible2" class="visible" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="opacity1">Transparantie schakelaars:</label>
+        <input id="opacity1" class="opacity" type="range" min="0" max="1" step="0.01"/>
+    </div>
+    <div class="control-box">
+        <label for="opacity2">Transparantie voedingen:</label>
+        <input id="opacity2" class="opacity" type="range" min="0" max="1" step="0.01"/>
+    </div>
+    <div class="control-box">
+        <label for="searchInput">Zoek op adres, voeding of schakelaar:</label>
+        <input id="searchInput" type="text"/>
+    </div>
+    <div class="control-box">
+        <button onclick="zoomToLocationOrLayer()">Zoeken</button>
+        <div id="errorMessage" style="color: red; margin-top: 5px;"></div>
+    </div>
+    <div class="control-box">
+        <button id="tekenButton" onclick="toggleDrawing()">Teken</button>
+    </div>
+</div>
+<div id="map"></div>
+<div id="popup2" class="popup2" style="display: none;"></div>
+<div class="legend">
+    <label>Legende:</label>
+    <div>
+        <i class="fas fa-dot-circle" style="color: red;"></i> <span style="color: red;">Gesloten</span><br>
+        <i class="fas fa-dot-circle" style="color: green;"></i> <span style="color: green;">Open</span>
+    </div>
+</div>
+
+<script>
+    let map;
+    let draw;
+
+    function openEditorLoginPage() {
+        window.location.href = "index.html"; // Redirect to the user page again
+    }
+
+    // Load JSON file from server
+    async function loadJSONFile() {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
+            if (!response.ok) {
+                throw new Error('Failed to fetch JSON file');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading JSON file:', error);
+            throw error;
+        }
+    }
+
+    // Function to find the S-value corresponding to a given V-value
+    async function findSValue(vValue) {
+        try {
+            // Load JSON file from server
+            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
+            if (!response.ok) {
+                throw new Error('Failed to fetch JSON file');
+            }
+            const jsonData = await response.json();
+
+            // Find the corresponding S-value for the given V-value
+            const sValueRow = jsonData.find(row => row[0] === vValue);
+
+            // Return the S-value if found
+            return sValueRow ? sValueRow[1] : 'Not found';
+        } catch (error) {
+            console.error('Error reading JSON file:', error);
+            throw error;
+        }
+    }
+
+    const center = ol.proj.fromLonLat([4.4024643, 51.2194475]);
+    const extentSize = 25000; // Size of the extent in meters (10 km = 10000 meters)
+    const extent = ol.extent.buffer(center.concat(center), extentSize);
+
+    const view = new ol.View({
+        center: center,
+        zoom: 13,
+        extent: extent // Set the extent
+    });
+
+    let pinClicked = false;
+    let drawingModeActive = false;
+    let drawnFeaturesSource = new ol.source.Vector(); // Source to hold drawn features
+    let drawnFeaturesLayer = new ol.layer.Vector({ // Layer to display drawn features
+        source: drawnFeaturesSource,
+    });
+
+    map = new ol.Map({
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.TileJSON({
+                    url: 'https://api.maptiler.com/maps/basic-v2/tiles.json?key=VTEyqAvEoi2G2xhpCGmi',
+                    tileSize: 512,
+                })
+            })
+        ],
+        target: 'map',
+        view: view // Use the view with the custom extent
+    });
+
+    const pointerElement = document.createElement('i');
+    pointerElement.className = 'pointer fa-solid fa-location-dot';
+    const pointerOverlay = new ol.Overlay({
+        element: pointerElement,
+        positioning: 'center-center',
+        stopEvent: false
+    });
+    map.addOverlay(pointerOverlay);
+
+    function toggleDrawing() {
+        if (drawingModeActive) {
+            // Clear previously drawn features if exiting drawing mode
+            drawnFeaturesSource.clear();
+            map.removeInteraction(draw);
+            document.getElementById('tekenButton').style.backgroundColor = '';
+        } else {
+            // Clear previously drawn features if starting a new drawing
+            drawnFeaturesSource.clear();
+            document.getElementById('tekenButton').style.backgroundColor = 'green';
+            initDrawingInteraction();
+
+        }
+        drawingModeActive = !drawingModeActive;
+    }
+
+    function initDrawingInteraction() {
+        if (!drawnFeaturesSource || !vectorLayer2 || !map) {
+            console.error('Missing required sources or map.');
+            return;
+        }
+
+        draw = new ol.interaction.Draw({
+            source: drawnFeaturesSource,
+            type: 'Polygon',
+        });
+        map.addInteraction(draw);
+
+        draw.on('drawend', async function(event) {
+            // Clear previous polygon
+            drawnFeaturesSource.clear();
+
+
+            // Lock the current polygon
+            const polygonFeature = event.feature;
+            const polygonGeometry = polygonFeature.getGeometry();
+
+            polygonFeature.setStyle(new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: 'blue',
+                    width: 2,
+                }),
+                fill: new ol.style.Fill({
+                    color: 'rgba(0, 0, 255, 0.2)',
+                }),
+            }));
+
+            // Add the drawn feature to the permanent layer
+            drawnFeaturesSource.addFeature(polygonFeature);
+
+            // Perform spatial query against features in Layer 2
+            const intersectingFeatures = new Set();
+            const polygonExtent = polygonGeometry.getExtent();
+
+            const features = vectorLayer2.getSource().getFeatures();
+            await Promise.all(features.map(async (feature) => {
+                const featureGeometry = feature.getGeometry();
+                const featureExtent = featureGeometry.getExtent();
+                if (ol.extent.intersects(polygonExtent, featureExtent)) {
+                    const layerName = feature.get('LAYER');
+                    const vValue = layerName;
+                    const sValue = await findSValue(vValue);
+                    const edgeFeedersSet = findEdgeFeeders(layerName); // Call the function to find edge feeders
+                    const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
+                    let layerData = { layerName: layerName, edgeFeeders: edgeFeeders, Switches: sValue };
+                    let isNewLayer = true;
+                    for (let data of intersectingFeatures) {
+                        if (data.layerName === layerName) {
+                            isNewLayer = false;
+                            break;
+                        }
+                    }
+                    if (isNewLayer) {
+                        intersectingFeatures.add(layerData);
+                    }
+                }
+            }));
+
+            // Display popup with information about intersecting features
+            handlePinClick();
+            const popup2Element = document.querySelector('.popup2');
+            if (intersectingFeatures.size > 0) {
+                const popupContent = Array.from(intersectingFeatures).map(function(data) {
+                    const feederName = data.layerName;
+                    const edgeFeeders = data.edgeFeeders;
+                    const switches = data.Switches
+                    return `<h4 style="margin-top: 0;">Location information:</h4><p>Main feeder: ${feederName}</p><p>Edge feeders: ${edgeFeeders}</p><p>Switches: ${switches}</p><p>Feeders to turn of: </p>`;
+                }).join('<hr>'); // Separate feature information with horizontal line
+                popup2Element.innerHTML = popupContent;
+
+            } else {
+                // If no intersecting features, display a message
+                popup2Element.innerHTML = '<p>No features found in the drawn area.</p>';
+                popup2Element.style.display = 'none';
+            }
+
+            // Clear the drawing interaction (but keep it active)
+            draw.finishDrawing();
+        });
+    }
+
+    map.on('click', async function(event) {
+    if(drawingModeActive) {
+        //No functionality yet
+    } else {
+        handlePinClick();
+        const popup2Element = document.querySelector('.popup2');
+        const coordinates = event.coordinate;
+        const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'); // Correct variable name
+        let closestFeature = null;
+        let closestDistance = Infinity;
+        vectorLayer2.getSource().forEachFeature(function(feature) {
+            const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
+            const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
+            const distance = ol.sphere.getDistance(transfcoordinates, featureCoords);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestFeature = feature;
+            }
+        });
+
+        if (closestFeature) {
+            const closestFeatureName = closestFeature.get('LAYER');
+            const lon = transfcoordinates[0];
+            const lat = transfcoordinates[1];
+            const vValue = closestFeatureName;
+            const sValue = await findSValue(vValue);
+            const edgeFeedersSet = findEdgeFeeders(closestFeatureName); // Call the function to find edge feeders
+            const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
+            const content = `<h4 style="margin-top: 0;">Location information:</h4> <p>Main feeder: ${closestFeatureName}</p> <p> Edge feeders: ${edgeFeeders.join(', ')}</p> <p>Switches: ${sValue}</p> <p> Feeders to turn off: </p>`;
+            popup2Element.innerHTML = content;
+        } else {
+            const lon = transfcoordinates[0];
+            const lat = transfcoordinates[1];
+            const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
+            popupElement2.innerHTML = content;
+        }
+
+        pointerOverlay.setPosition(coordinates);
+    }
+});
+
+    // Function to handle the pin click event
+    function handlePinClick() {
+        pinClicked = true;
+        const popup2Element = document.getElementById('popup2');
+        if (pinClicked) {
+            popup2Element.style.display = 'block';
+        } else {
+            popup2Element.style.display = 'none';
+        }
+    }
+
+
+
+    // Add a click event listener to the pin element
+    pointerElement.addEventListener('click', function(event) {
+        // Prevent the singleclick event on the map from firing
+        event.stopPropagation();
+        handlePinClick();
+    });
+
+    map.on('dblclick', function(event) {
+        if (drawingModeActive) {
+            // Prevent map zoom on double-click during drawing mode
+            event.preventDefault();
+        }
+    });
+
+    map.getViewport().addEventListener('contextmenu', function(event) {
+        if (drawingModeActive) {
+            // Finish drawing on right-click
+            event.preventDefault();
+            draw.finishDrawing();
+
+        } else {
+           // Prevent the default context menu from appearing
+           event.preventDefault();
+           // Hide the pointer
+           pointerOverlay.setPosition(undefined);
+           const popup2Element = document.getElementById('popup2');
+           popup2Element.style.display = 'none';
+        }
+    });
+    map.addLayer(drawnFeaturesLayer);
+
+    // Object to store the colors for each layer
+    const layerColors = {};
+
+    // Load GeoJSON data for the first layer
+    const geojsonSource1 = new ol.source.Vector({
+        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/schakelaars2.geojson',
+        format: new ol.format.GeoJSON()
+    });
+
+    // Style for the first layer (dots) with red/green color and label
+    const geojsonStyle1 = function(feature) {
+        const layerName = feature.get('LAYER'); // Get the name of the layer from the 'LAYER' property;
+        const color = 'red'; // Set color to red
+        // Create style for the feature
+        return new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({
+                    color: color // Use the color
+                }),
+                stroke: new ol.style.Stroke({
+                    color: color, // Use the color
+                    width: 2
+                })
+            }),
+            text: new ol.style.Text({
+                text: layerName, // Display the layer name as label
+                font: '12px Calibri,sans-serif',
+                offsetY: -12,
+                fill: new ol.style.Fill({ color: color }) // Use the same color for the label
+            })
+        });
+    };
+
+   document.addEventListener('DOMContentLoaded', function () {
+        const logTable = document.getElementById('logTable');
+        const rows = logTable.getElementsByTagName('tr');
+        const itemsPerPage = 2; // Adjust as needed
+        let currentPage = 0;
+
+        // Show the header row
+        rows[0].style.display = 'table-row';
+
+        function showPage(page) {
+            const startIndex = page * itemsPerPage + 1; // Start from index 1 to skip the header roww
+            const endIndex = Math.min(startIndex + itemsPerPage, rows.length);
+
+            for (let i = 1; i < rows.length; i++) { // Start from index 1 to skip the header row
+                if (i >= startIndex && i < endIndex) {
+                    rows[i].style.display = 'table-row';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+
+            // Update the showing items text
+            const showingItemsText = document.getElementById('showingItemsText');
+            if (showingItemsText) {
+                const firstItemIndex = startIndex;
+                const lastItemIndex = Math.min(endIndex - 1, rows.length - 1); // Exclude header row
+                showingItemsText.textContent = `Showing item ${firstItemIndex} - ${lastItemIndex} from ${rows.length - 1} items`;
+            }
+
+            // Update active state of page buttons
+            updateActiveButtonState();
+        }
+
+        function navigateToPage(page) {
+            currentPage = page;
+            showPage(currentPage);
+        }
+
+        function setupPagination() {
+            const pageCount = Math.ceil((rows.length - 1) / itemsPerPage); // Exclude header row
+
+            // Create pagination container
+            const paginationContainer = document.createElement('div');
+            paginationContainer.className = 'pagination';
+
+            // First page button
+            const firstPageButton = document.createElement('button');
+            firstPageButton.textContent = '<<';
+            firstPageButton.addEventListener('click', function () {
+                navigateToPage(0);
+            });
+            paginationContainer.appendChild(firstPageButton);
+
+            // Previous page button
+            const prevPageButton = document.createElement('button');
+            prevPageButton.textContent = '<';
+            prevPageButton.addEventListener('click', function () {
+                navigateToPage(Math.max(0, currentPage - 1));
+            });
+            paginationContainer.appendChild(prevPageButton);
+
+            // Page number buttons
+            for (let i = 0; i < pageCount; i++) {
+                const button = document.createElement('button');
+                button.textContent = i + 1;
+                button.addEventListener('click', function () {
+                    navigateToPage(i);
+                });
+                paginationContainer.appendChild(button);
+            }
+
+            // Next page button
+            const nextPageButton = document.createElement('button');
+            nextPageButton.textContent = '>';
+            nextPageButton.addEventListener('click', function () {
+                navigateToPage(Math.min(pageCount - 1, currentPage + 1));
+            });
+            paginationContainer.appendChild(nextPageButton);
+
+            // Last page button
+            const lastPageButton = document.createElement('button');
+            lastPageButton.textContent = '>>';
+            lastPageButton.addEventListener('click', function () {
+                navigateToPage(pageCount - 1);
+            });
+            paginationContainer.appendChild(lastPageButton);
+
+            // Add pagination container after the table
+            logTable.insertAdjacentElement('afterend', paginationContainer);
+
+            // Create and append showing items text
+            const showingItemsText = document.createElement('div');
+            showingItemsText.id = 'showingItemsText';
+            showingItemsText.textContent = `Showing item 1 - ${Math.min(itemsPerPage, rows.length - 1)} from ${rows.length - 1} items`;
+            logTable.insertAdjacentElement('afterend', showingItemsText);
+
+            // Show the initial page
+            showPage(currentPage);
+        }
+
+        // Function to update active state of page buttons
+        function updateActiveButtonState() {
+            const pageButtons = document.querySelectorAll('.pagination button');
+            pageButtons.forEach((button, index) => {
+                if (index === currentPage + 2) { // Index + 2 as we have two additional buttons (<< and <)
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
+        // Initialize pagination
+        setupPagination();
+    });
+
+    function openLogModal() {
+        const modal = document.getElementById('logModal');
+        modal.style.display = 'block';
+        // Additional logic to fetch and populate the table data can be added here
+    }
+
+    // Function to close the log modal
+    function closeLogModal() {
+        const modal = document.getElementById('logModal');
+        modal.style.display = 'none';
+    }
+
+
+    function findEdgeFeeders(mainFeederName) {
+    const edgeFeedersSet = new Set();
+
+    // Find all instances of the main feeder
+    const mainFeederFeatures = [];
+    vectorLayer2.getSource().forEachFeature(function(feature) {
+        const featureName = feature.get('LAYER');
+        if (featureName === mainFeederName) {
+            mainFeederFeatures.push(feature);
+        }
+    });
+
+    // Iterate through main feeder instances and find intersecting edge feeders
+    mainFeederFeatures.forEach(function(mainFeederFeature) {
+        const mainFeederGeometry = mainFeederFeature.getGeometry();
+        vectorLayer2.getSource().forEachFeature(function(innerFeature) {
+            const innerFeatureName = innerFeature.get('LAYER');
+            if (innerFeatureName !== mainFeederName && mainFeederGeometry.intersectsExtent(innerFeature.getGeometry().getExtent())) {
+                edgeFeedersSet.add(innerFeatureName); // Add to the Set
+            }
+        });
+    });
+
+    return edgeFeedersSet;
+}
+
+
+    // Create the first vector layer
+    const vectorLayer1 = new ol.layer.Vector({
+        source: geojsonSource1,
+        style: geojsonStyle1
+    });
+
+    // Add the first vector layer to the mapp
+    map.addLayer(vectorLayer1);
+
+    // Load GeoJSON data for the second layer
+    const geojsonSource2 = new ol.source.Vector({
+        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voedingen3.geojson',
+        format: new ol.format.GeoJSON()
+    });
+
+    // Style for the second layer (lines) with dynamic color and label
+    const geojsonStyle2 = function(feature) {
+        const layerName = feature.get('LAYER'); // Get the name of the layer from the 'LAYER' property
+        let color;
+        if (layerColors[layerName]) {
+            // If color is already assigned, reuse it
+            color = layerColors[layerName];
+        } else {
+            // Otherwise, generate a new random color and store it
+            color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+            layerColors[layerName] = color;
+        }
+        // Create style for the feature
+        return new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: color, // Use the color
+                width: 3
+            }),
+            text: new ol.style.Text({
+                text: layerName, // Display the layer name as label
+                font: '12px Calibri,sans-serif',
+                offsetY: -12,
+                fill: new ol.style.Fill({ color: color }) // Use the same color for the label
+            })
+        });
+    };
+
+    // Create the second vector layer with the dynamic style function
+    const vectorLayer2 = new ol.layer.Vector({
+        source: geojsonSource2,
+        style: geojsonStyle2
+    });
+
+    // Add the second vector layer to the map
+    map.addLayer(vectorLayer2);
+
+    // Troubleshooting: Add an event listener to check for errors
+    vectorLayer2.getSource().on('change', function(evt) {
+        if (vectorLayer2.getSource().getState() === 'ready') {
+            console.log('Data loaded successfully.');
+        } else if (vectorLayer2.getSource().getState() === 'error') {
+            console.error('Error loading data:', vectorLayer2.getSource().getLoadingError());
+        }
+    });
+
+    // Function to handle layer visibility
+    function handleLayerVisibility(layer, checkboxId) {
+        const checkbox = document.getElementById(checkboxId);
+        checkbox.addEventListener('change', function() {
+            layer.setVisible(this.checked);
+        });
+    }
+
+    // Function to handle layer opacity
+    function handleLayerOpacity(layer, rangeId) {
+        const rangeInput = document.getElementById(rangeId);
+        rangeInput.addEventListener('input', function() {
+            layer.setOpacity(parseFloat(this.value));
+        });
+        rangeInput.value = String(layer.getOpacity());
+    }
+
+    // Function to zoom to a specific location or layer
+    function zoomToLocationOrLayer() {
+        const searchText = document.getElementById('searchInput').value;
+        if (searchText) {
+            let foundLayer2 = false;
+            let foundLayer1 = false;
+            // Check if the search text matches a feature in Layer 2
+            vectorLayer2.getSource().forEachFeature(function(feature) {
+                if (feature.get('LAYER') === searchText) {
+                    const extent = feature.getGeometry().getExtent();
+                    map.getView().fit(extent, { duration: 1000 });
+                    foundLayer2 = true;
+                    return;
+                }
+            });
+            // If not found in Layer 2, check Layer 1
+            if (!foundLayer2) {
+                vectorLayer1.getSource().forEachFeature(function(feature) {
+                    if (feature.get('LAYER') === searchText) {
+                        const extent = feature.getGeometry().getExtent();
+                        map.getView().fit(extent, { duration: 1000 });
+                        foundLayer1 = true;
+                        return;
+                    }
+                });
+            }
+            // If not found in Layer 1, try to geocode the search text as an address
+            if (!foundLayer2 && !foundLayer1) {
+                geocodeAddress(searchText);
+            }
+            // Display error message if nothing is found
+            if (!foundLayer2 && !foundLayer1 && !searchText) {
+                document.getElementById('errorMessage').textContent = 'Voeding, Schakelaar of adres niet gevonden';
+            } else {
+                document.getElementById('errorMessage').textContent = ''; // Clear error message
+            }
+        } else {
+            document.getElementById('errorMessage').textContent = 'Voeding, Schakelaar of adres niet gevonden';
+        }
+    }
+
+
+    // Function to geocode an address and zoom to its location
+    function geocodeAddress(address) {
+        const postalcode = '2000';
+        const city = 'Antwerpen';
+        const fullAddress = address + ', ' + city + ', ' + postalcode;
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(fullAddress);
+        fetch(url)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data && data.length > 0) {
+                    const location = data[0];
+                    const coordinates = [parseFloat(location.lon), parseFloat(location.lat)];
+                    map.getView().animate({ center: ol.proj.fromLonLat(coordinates), zoom: 18, duration: 1000 });
+                } else {
+                    alert('Address not found!');
+                }
+            })
+            .catch(function(error) {
+                console.error('Error geocoding address:', error);
+            });
+    }
+
+    function reloadPage() {
+        location.reload();
+    }
+
+    // Handle visibility for OSM layer
+    handleLayerVisibility(map.getLayers().item(0), 'visible0');
+
+    // Handle visibility for QGIS layer 1
+    handleLayerVisibility(vectorLayer1, 'visible1');
+
+    // Handle visibility for QGIS layer 2
+    handleLayerVisibility(vectorLayer2, 'visible2');
+
+    // Handle opacity for QGIS layer 1
+    handleLayerOpacity(vectorLayer1, 'opacity1');
+
+    // Handle opacity for QGIS layer 2
+    handleLayerOpacity(vectorLayer2, 'opacity2');
+</script>
+</body>
+</html>
