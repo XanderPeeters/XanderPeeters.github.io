@@ -63,9 +63,11 @@
         }
 
         .pointer {
-            font-size: 24px;
-            color: red;
             position: absolute;
+            top: -22px;
+            left: -9px;
+            font-size: 24px;
+            color: blue;
             z-index: 1000;
          }
 
@@ -375,6 +377,10 @@
         <input id="visible2" class="visible" type="checkbox" checked/>
     </div>
     <div class="control-box">
+        <label for="visibleGrey">Grijze achtergrond:</label>
+        <input id="visibleGrey" type="checkbox"/>
+    </div>
+    <div class="control-box">
         <label for="opacity1">Transparantie schakelaars:</label>
         <input id="opacity1" class="opacity" type="range" min="0" max="1" step="0.01"/>
     </div>
@@ -578,7 +584,6 @@
 
             } else {
                 // If no intersecting features, display a message
-                popup2Element.innerHTML = '<p>No features found in the drawn area.</p>';
                 popup2Element.style.display = 'none';
             }
 
@@ -588,7 +593,7 @@
     }
 
     map.on('click', async function(event) {
-    if(drawingModeActive) {
+    if (drawingModeActive) {
         //No functionality yet
     } else {
         handlePinClick();
@@ -596,7 +601,7 @@
         const coordinates = event.coordinate;
         const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'); // Correct variable name
         let closestFeature = null;
-        let closestDistance = Infinity;
+        let closestDistance = Infinity; // Initialize with infinity
         vectorLayer2.getSource().forEachFeature(function(feature) {
             const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
             const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
@@ -607,24 +612,29 @@
             }
         });
 
-        if (closestFeature) {
-            const closestFeatureName = closestFeature.get('LAYER');
-            const lon = transfcoordinates[0];
-            const lat = transfcoordinates[1];
-            const vValue = closestFeatureName;
-            const sValue = await findSValue(vValue);
-            const edgeFeedersSet = findEdgeFeeders(closestFeatureName); // Call the function to find edge feeders
-            const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
-            const content = `<h4 style="margin-top: 0;">Location information:</h4> <p>Main feeder: ${closestFeatureName}</p> <p> Edge feeders: ${edgeFeeders.join(', ')}</p> <p>Switches: ${sValue}</p> <p> Feeders to turn off: </p>`;
-            popup2Element.innerHTML = content;
-        } else {
-            const lon = transfcoordinates[0];
-            const lat = transfcoordinates[1];
-            const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
-            popupElement2.innerHTML = content;
-        }
+        // Check if distance exceeds the threshold (for example, 1000 meters)
+        if (closestDistance <= 500) {
+            if (closestFeature) {
+                const closestFeatureName = closestFeature.get('LAYER');
+                const lon = transfcoordinates[0];
+                const lat = transfcoordinates[1];
+                const vValue = closestFeatureName;
+                const sValue = await findSValue(vValue);
+                const edgeFeedersSet = findEdgeFeeders(closestFeatureName); // Call the function to find edge feeders
+                const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
 
-        pointerOverlay.setPosition(coordinates);
+                const content = `<h4 style="margin-top: 0;">Location information:</h4> <p>Main feeder: ${closestFeatureName}</p> <p> Edge feeders: ${edgeFeeders.join(', ')}</p> <p>Switches: ${sValue}</p> <p> Feeders to turn off: </p>`;
+                popup2Element.innerHTML = content;
+            } else {
+                const lon = transfcoordinates[0];
+                const lat = transfcoordinates[1];
+                const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
+                popupElement2.innerHTML = content;
+            }
+        } else {
+            popup2Element.style.display = 'none'; // Hide the popup if distance exceeds threshold
+        }
+    pointerOverlay.setPosition(coordinates);
     }
 });
 
@@ -699,9 +709,9 @@
             }),
             text: new ol.style.Text({
                 text: layerName, // Display the layer name as label
-                font: '12px Calibri,sans-serif',
+                font: 'bold 12px Calibri,sans-serif',
                 offsetY: -12,
-                fill: new ol.style.Fill({ color: color }) // Use the same color for the label
+                fill: new ol.style.Fill({ color: 'black' }) // Use the same color for the label
             })
         });
     };
@@ -862,6 +872,22 @@
 }
 
 
+    // Load GeoJSON data for the grey map layer
+    const greyMapSource = new ol.source.TileJSON({
+        url: 'https://api.maptiler.com/maps/basic-v2-light/tiles.json?key=VTEyqAvEoi2G2xhpCGmi',
+        tileSize: 512,
+    });
+
+    // Create the grey map layer
+    const greyMapLayer = new ol.layer.Tile({
+        source: greyMapSource,
+        visible: false // Initially set to invisible
+    });
+
+    // Add the grey map layer to the map
+    map.addLayer(greyMapLayer);
+
+
     // Create the first vector layer
     const vectorLayer1 = new ol.layer.Vector({
         source: geojsonSource1,
@@ -913,9 +939,9 @@
                         }),
                         text: new ol.style.Text({
                             text: layerName,
-                            font: '12px Calibri,sans-serif',
+                            font: 'bold 12px Calibri,sans-serif',
                             offsetY: -12,
-                            fill: new ol.style.Fill({ color: color })
+                            fill: new ol.style.Fill({ color: 'black' })
                         })
                     });
                 } else {
@@ -1038,6 +1064,9 @@
 
     // Handle visibility for QGIS layer 2
     handleLayerVisibility(vectorLayer2, 'visible2');
+
+    // Handle visibility for greylayer
+    handleLayerVisibility(greyMapLayer, 'visibleGrey');
 
     // Handle opacity for QGIS layer 1
     handleLayerOpacity(vectorLayer1, 'opacity1');
