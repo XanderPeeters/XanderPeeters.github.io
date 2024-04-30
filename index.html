@@ -171,16 +171,20 @@
         <input id="visibleGrey" type="checkbox"/>
     </div>
     <div class="control-box">
-        <label for="visible2">Voedingen:</label>
-        <input id="visible2" class="visible" type="checkbox" checked/>
-    </div>
-    <div class="control-box">
-        <label for="metroSwitch">Schakelaars metro:</label>
+        <label for="metroSwitch">Metro schakelaars</label>
         <input id="metroSwitch" class="switch" type="checkbox" checked/>
     </div>
     <div class="control-box">
-        <label for="bovengrondsSwitch">Schakelaars bovengronds:</label>
+        <label for="bovengrondsSwitch">Bovengronds schakelaars:</label>
         <input id="bovengrondsSwitch" class="switch" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="voedingenMetro">Metro Voedingen:</label>
+        <input id="voedingenMetro" class="switch" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="voedingenBovengronds">Bovengronds Voedingen:</label>
+        <input id="voedingenBovengronds" class="switch" type="checkbox" checked/>
     </div>
     <div class="control-box">
         <label for="searchInput">Zoek op adres, voeding of schakelaar:</label>
@@ -226,7 +230,7 @@
         }
     }
 
-    // Function to find the S-value corresponding to a given V-value
+    // Function to find the items corresponding to a given V-number
     async function find_switches(main_feeder) {
         try {
             // Load JSON file from server
@@ -236,16 +240,23 @@
             }
             const jsonData = await response.json();
 
-            // Find the corresponding S-value for the given V-value
-            const switchesRow = jsonData.find(row => row[0] === main_feeder);
+            // Ensure jsonData is an array
+            if (!Array.isArray(jsonData)) {
+                throw new Error('Invalid JSON data format');
+            }
 
-            // Return the S-value if found
-            return switchesRow ? switchesRow[1] : 'Not found';
+            // Find the corresponding items for the given V-number
+            const switchesRow = jsonData.find(row => row['V-number'] === main_feeder);
+
+            // Return the items if found
+            return switchesRow ? switchesRow['Items'] : 'Not found';
         } catch (error) {
             console.error('Error reading JSON file:', error);
             throw error;
         }
     }
+
+
 
     const center = ol.proj.fromLonLat([4.4024643, 51.2194475]);
     const extentSize = 25000; // Size of the extent in meters (10 km = 10000 meters)
@@ -640,24 +651,33 @@
     function findEdgeFeeders(mainFeederName) {
     const edgeFeedersSet = new Set();
 
-    // Find all instances of the main feeder
-    const mainFeederFeatures = [];
+    // Find all instances of the main feeder and collect its outer points
+    const mainFeederPoints = new Set();
     feeder_layer.getSource().forEachFeature(function(feature) {
         const featureName = feature.get('LAYER');
         if (featureName === mainFeederName) {
-            mainFeederFeatures.push(feature);
+            const featureGeometry = feature.getGeometry();
+            featureGeometry.getCoordinates().forEach(lineString => {
+                const lineStringLength = lineString.length;
+                mainFeederPoints.add(lineString[0].toString());
+                mainFeederPoints.add(lineString[lineStringLength - 1].toString());
+            });
         }
     });
 
-    // Iterate through main feeder instances and find intersecting edge feeders
-    mainFeederFeatures.forEach(function(mainFeederFeature) {
-        const mainFeederGeometry = mainFeederFeature.getGeometry();
-        feeder_layer.getSource().forEachFeature(function(innerFeature) {
-            const innerFeatureName = innerFeature.get('LAYER');
-            if (innerFeatureName !== mainFeederName && mainFeederGeometry.intersectsExtent(innerFeature.getGeometry().getExtent())) {
-                edgeFeedersSet.add(innerFeatureName); // Add to the Set
-            }
-        });
+    // Iterate through all features and find intersecting edge feeders
+    feeder_layer.getSource().forEachFeature(function(feature) {
+        const featureName = feature.get('LAYER');
+        if (featureName !== mainFeederName) {
+            const featureGeometry = feature.getGeometry();
+            featureGeometry.getCoordinates().forEach(lineString => {
+                lineString.forEach(point => {
+                    if (mainFeederPoints.has(point.toString())) {
+                        edgeFeedersSet.add(featureName); // Add to the Set
+                    }
+                });
+            });
+        }
     });
 
     return edgeFeedersSet;
@@ -773,50 +793,50 @@
     }
 
     const popupElement = document.getElementById('popup');
-popupElement.addEventListener('click', function(event) {
-    if (event.target.id === 'exportButton') {
-        const files = [
-            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voeding%20165.xlsm',
-            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voorbeeld%20voeding%20101.xlsm',
-            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20152.xlsm',
-            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20332.xlsm',
-            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%2081.xlsm'
-        ];
+    popupElement.addEventListener('click', function(event) {
+        if (event.target.id === 'exportButton') {
+            const files = [
+                'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voeding%20165.xlsm',
+                'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voorbeeld%20voeding%20101.xlsm',
+                'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20152.xlsm',
+                'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20332.xlsm',
+                'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%2081.xlsm'
+            ];
 
-        const randomIndex = Math.floor(Math.random() * files.length);
-        const randomFileURL = files[randomIndex];
+            const randomIndex = Math.floor(Math.random() * files.length);
+            const randomFileURL = files[randomIndex];
 
-        // Fetch the file content
-        fetch(randomFileURL)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch file');
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                // Create a temporary anchor element to download the file
-                const downloadLink = document.createElement('a');
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = `Schakelnota_${randomIndex}.xlsm`; // Generate a dynamic filename
-                downloadLink.click();
-            })
-            .catch(error => {
-                console.error('Error fetching file:', error);
-                // Handle error here
-            });
-        const content = popupElement.innerHTML;
-        //exportToExcel(content);
-        // Get the drawn polygon from the drawn features layer if it exists
-        //const drawnPolygon = getDrawnPolygon();
-        //if (drawnPolygon) {
-          //  exportMapImagePolygon(drawnPolygon); // Pass the drawn polygon
-        // } else {
-            // If no drawn polygon exists, export the current map view as an image
-           // exportMapImage();
-        // }
-    }
-});
+            // Fetch the file content
+            fetch(randomFileURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch file');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create a temporary anchor element to download the file
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(blob);
+                    downloadLink.download = `Schakelnota_${randomIndex}.xlsm`; // Generate a dynamic filename
+                    downloadLink.click();
+                })
+                .catch(error => {
+                    console.error('Error fetching file:', error);
+                    // Handle error here
+                });
+            const content = popupElement.innerHTML;
+            //exportToExcel(content);
+            // Get the drawn polygon from the drawn features layer if it exists
+            //const drawnPolygon = getDrawnPolygon();
+            //if (drawnPolygon) {
+            //  exportMapImagePolygon(drawnPolygon); // Pass the drawn polygon
+            // } else {
+                // If no drawn polygon exists, export the current map view as an image
+            // exportMapImage();
+            // }
+        }
+    });
 
 
     // Function to get the drawn polygon from the drawn features layer
@@ -1075,7 +1095,8 @@ function zoomToMainFeederExtent(mainFeederFeatures) {
             geocodeAddress(searchText)
             //remove popup in this condition 
             const popupElement = document.getElementById('popup');
-            popupElement.style.display = 'none';   
+            popupElement.style.display = 'none';  
+            popupElement.style.display = 'none'; 
         } else if (!found && wronginput) {
             document.getElementById('errorMessage').textContent = ''; // Clear error message
             const popupElement = document.getElementById('popup');     
@@ -1149,12 +1170,43 @@ function zoomToMainFeederExtent(mainFeederFeatures) {
         }
     });
 
+    document.addEventListener('DOMContentLoaded', function () {
+        const voedingenMetroSwitch = document.getElementById('voedingenMetro');
+        const voedingenBovengrondsSwitch = document.getElementById('voedingenBovengronds');
+
+        voedingenMetroSwitch.addEventListener('change', function () {
+            updateVoedingenVisibility();
+        });
+
+        voedingenBovengrondsSwitch.addEventListener('change', function () {
+            updateVoedingenVisibility();
+        });
+
+        function updateVoedingenVisibility() {
+            const voedingenMetroVisible = voedingenMetroSwitch.checked;
+            const voedingenBovengrondsVisible = voedingenBovengrondsSwitch.checked;
+
+            // Assuming you have a function Feeders_source.getFeatures() similar to the one used before
+            Feeders_source.getFeatures().forEach(function (feature) {
+                const metro = feature.get('metro?');
+                if ((metro === 'metro' && voedingenMetroVisible) || (metro === 'boven' && voedingenBovengrondsVisible)) {
+                    feature.setStyle(null); // Show the feature
+                } else {
+                    feature.setStyle(new ol.style.Style({ // Hide the feature
+                        fill: new ol.style.Fill({
+                            color: 'rgba(255, 255, 255, 0)'
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: 'rgba(255, 255, 255, 0)'
+                        })
+                    }));
+                }
+            });
+        }
+    });
 
     // Handle visibility for OSM layer
     handleLayerVisibility(map.getLayers().item(0), 'visible_map');
-
-    // Handle visibility for QGIS layer 2
-    handleLayerVisibility(feeder_layer, 'visible2');
 
     // Handle visibility for greylayer
     handleLayerVisibility(greyMapLayer, 'visibleGrey');
