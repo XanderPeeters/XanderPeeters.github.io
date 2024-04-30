@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
     <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.4/xlsx.full.min.js"></script> <!-- Include SheetJS library -->
     <style>
         body {
@@ -84,7 +85,7 @@
             font-size: 14px;
         }
 
-        .popup2 {
+        .popup {
             position: absolute;
             background-color: rgba(255, 255, 255, 0.9);
             padding: 5px 10px;
@@ -100,35 +101,6 @@
             max-height: 300px;
             font-family: Arial, sans-serif;
             font-size: 14px;
-        }
-
-        .control-box {
-            margin-bottom: 10px;
-        }
-
-        .control-box label {
-            display: block; /* Each label on a new line */
-            margin-bottom: 5px; /* Add space between labels */
-            font-weight: bold; /* Make label text bold */
-        }
-
-        .control-box input[type="text"],
-        .control-box input[type="range"],
-        .control-box button {
-            width: 100%; /* Take up full width */
-            padding: 5px; /* Add padding */
-            box-sizing: border-box; /* Include padding in width */
-        }
-
-        .control-box button {
-            background-color: #007bff; /* Blue button color */
-            color: white; /* White text color */
-            border: none; /* Remove border */
-            cursor: pointer; /* Add pointer cursor */
-        }
-
-        .control-box button:hover {
-            background-color: #0056b3; /* Darker blue on hover */
         }
 
         .control-box {
@@ -178,58 +150,52 @@
             background-color: #0056b3; /* Darker blue on hover */
         }
 
-
     </style>
 </head>
 <body>
-
 <div id="controls">
     <div class="control-box" id="logoAndEditorContainer">
         <div id="logoContainer">
-            <img src="https://github.com/XanderPeeters/Schakelboekje/blob/master/De_Lijn.svg.png?raw=true" alt="De Lijn logo" width="75" height="auto" onclick="reloadPage()">
+           <img src="https://github.com/XanderPeeters/Schakelboekje/blob/master/De_Lijn.svg.png?raw=true" alt="De Lijn logo" width="75" height="auto" onclick="reloadPage()">
         </div>
         <div id="editorLoginContainer">
-            <button id="editorLoginButton" onclick="openEditorLoginPage()">Editor Login</button>
+            <button id="editorLoginButton" onclick="openEditorLoginPage()">Editor page</button>
         </div>
     </div>
     <div class="control-box">
-        <label for="visible0">Kaart:</label>
-        <input id="visible0" class="visible" type="checkbox" checked/>
-    </div>
-    <div class="control-box">
-        <label for="visible1">Sectie schakelaars:</label>
-        <input id="visible1" class="visible" type="checkbox" checked/>
-    </div>
-    <div class="control-box">
-        <label for="visible2">Voedingen:</label>
-        <input id="visible2" class="visible" type="checkbox" checked/>
+        <label for="visible_map">Kaart:</label>
+        <input id="visible_map" class="visible" type="checkbox" checked/>
     </div>
     <div class="control-box">
         <label for="visibleGrey">Grijze achtergrond:</label>
         <input id="visibleGrey" type="checkbox"/>
     </div>
     <div class="control-box">
-        <label for="opacity1">Transparantie schakelaars:</label>
-        <input id="opacity1" class="opacity" type="range" min="0" max="1" step="0.01"/>
+        <label for="visible2">Voedingen:</label>
+        <input id="visible2" class="visible" type="checkbox" checked/>
     </div>
     <div class="control-box">
-        <label for="opacity2">Transparantie voedingen:</label>
-        <input id="opacity2" class="opacity" type="range" min="0" max="1" step="0.01"/>
+        <label for="metroSwitch">Schakelaars metro:</label>
+        <input id="metroSwitch" class="switch" type="checkbox" checked/>
+    </div>
+    <div class="control-box">
+        <label for="bovengrondsSwitch">Schakelaars bovengronds:</label>
+        <input id="bovengrondsSwitch" class="switch" type="checkbox" checked/>
     </div>
     <div class="control-box">
         <label for="searchInput">Zoek op adres, voeding of schakelaar:</label>
         <input id="searchInput" type="text"/>
     </div>
     <div class="control-box">
-        <button onclick="zoomToLocationOrLayer()">Zoeken</button>
+        <button onclick="searchLayerFeatureOrAddress()">Zoeken</button>
         <div id="errorMessage" style="color: red; margin-top: 5px;"></div>
     </div>
     <div class="control-box">
-        <button id="tekenButton" onclick="toggleDrawing()">Teken</button>
+        <button id="draw_Button" onclick="toggleDrawing()">Teken</button>
     </div>
 </div>
 <div id="map"></div>
-<div id="popup2" class="popup2" style="display: none;"></div>
+<div id="popup" class="popup" style="display: none;"></div>
 <div class="legend">
     <label>Legende:</label>
     <div>
@@ -242,7 +208,45 @@
     let map;
     let draw;
 
-    //SETTING UP THE MAP
+    function openEditorLoginPage() {
+        window.location.href = "login.html"; // Redirect to the user page again
+    }
+
+    // Load JSON file from server
+    async function loadJSONFile() {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
+            if (!response.ok) {
+                throw new Error('Failed to fetch JSON file');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error loading JSON file:', error);
+            throw error;
+        }
+    }
+
+    // Function to find the S-value corresponding to a given V-value
+    async function find_switches(main_feeder) {
+        try {
+            // Load JSON file from server
+            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
+            if (!response.ok) {
+                throw new Error('Failed to fetch JSON file');
+            }
+            const jsonData = await response.json();
+
+            // Find the corresponding S-value for the given V-value
+            const switchesRow = jsonData.find(row => row[0] === main_feeder);
+
+            // Return the S-value if found
+            return switchesRow ? switchesRow[1] : 'Not found';
+        } catch (error) {
+            console.error('Error reading JSON file:', error);
+            throw error;
+        }
+    }
+
     const center = ol.proj.fromLonLat([4.4024643, 51.2194475]);
     const extentSize = 25000; // Size of the extent in meters (10 km = 10000 meters)
     const extent = ol.extent.buffer(center.concat(center), extentSize);
@@ -266,6 +270,7 @@
                 source: new ol.source.TileJSON({
                     url: 'https://api.maptiler.com/maps/basic-v2/tiles.json?key=VTEyqAvEoi2G2xhpCGmi',
                     tileSize: 512,
+                    crossOrigin: 'anonymous',
                 })
             })
         ],
@@ -273,141 +278,6 @@
         view: view // Use the view with the custom extent
     });
 
-
-
-
-    //DEFINING LAYER1: Schakelaars, bovengronds
-    // Load GeoJSON data for the first layer
-    const geojsonSource1 = new ol.source.Vector({
-        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/schakelaars2.geojson',
-        format: new ol.format.GeoJSON()
-    });
-
-    // Style for the first layer (dots) with red/green color and label
-    const geojsonStyle1 = function(feature) {
-        const layerName = feature.get('LAYER'); // Get the name of the layer from the 'LAYER' property;
-        const plaats = feature.get('PLAATS'); // Get the 'PLAATS' attribute
-        const color = 'red'; // Set color to red
-        // Create style for the feature
-        return new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 6,
-                fill: new ol.style.Fill({
-                    color: color // Use the color
-                }),
-                stroke: new ol.style.Stroke({
-                    color: color, // Use the color
-                    width: 2
-                })
-            }),
-            text: new ol.style.Text({
-                text: map.getView().getZoom() >= 15 ? (map.getView().getZoom() >= 20 ? layerName + (plaats ? ' - ' + plaats : '') : layerName) : '', // Show layer name from zoom level 15 and add 'PLAATS' from zoom level 20
-                font: 'bold 12px Calibri,sans-serif',
-                offsetY: -12,
-                fill: new ol.style.Fill({ color: 'black' }) // Use the same color for the label
-            })
-        });
-    };
-
-    // Create the first vector layer
-    const vectorLayer1 = new ol.layer.Vector({
-        source: geojsonSource1,
-        style: geojsonStyle1
-    });
-
-    // Add the first vector layer to the mapp
-    map.addLayer(vectorLayer1);
-
-
-    //DEFINING LAYER2: Feeders
-    // Load GeoJSON data for the second layer
-    const geojsonSource2 = new ol.source.Vector({
-        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/Voedingen-stadsplan.geojson',
-        format: new ol.format.GeoJSON()
-    });
-
-
-    // Create the second vector layer without style
-    const vectorLayer2 = new ol.layer.Vector({
-        source: geojsonSource2
-    });
-
-    // Add the second vector layer to the map
-    map.addLayer(vectorLayer2);
-
-    // Fetch JSON data from the server
-    fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/Kleuren.json')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch JSON file');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Define a map to store colors for feeders
-            const feederColors = new Map(data.map(entry => [entry.LAYER, entry.COLOR]));
-
-            // Modified style function to use assigned colors for feeders
-            const geojsonStyle2 = function(feature) {
-                const layerName = feature.get('LAYER'); // Get the name of the feeder from the 'LAYER' property
-
-                // Get color for the current feeder from the map
-                const color = feederColors.get(layerName);
-
-                // If color is found, create style for the feature
-                if (color) {
-                    return new ol.style.Style({
-                        stroke: new ol.style.Stroke({
-                            color: color,
-                            width: 3
-                        }),
-                        text: new ol.style.Text({
-                            text: map.getView().getZoom() >= 15 ? layerName : '', // Show label only from zoom level 15
-                            font: 'bold 12px Calibri,sans-serif',
-                            offsetY: -12,
-                            fill: new ol.style.Fill({ color: 'black' })
-                        })
-                    });
-                } else {
-                    // If color is not found, handle as needed
-                    console.error('Color not found for layer:', layerName);
-                    // You can choose to assign a default color or handle the situation differently
-                    return null;
-                }
-            };
-
-            // Set style function for the vector layer
-            vectorLayer2.setStyle(geojsonStyle2);
-        })
-        .catch(error => {
-            console.error('Error reading JSON file:', error);
-            // Handle error here
-        });
-
-
-
-
-    //DEFINING GREY LAYER
-    // Load GeoJSON data for the grey map layer
-    const greyMapSource = new ol.source.TileJSON({
-        url: 'https://api.maptiler.com/maps/basic-v2-light/tiles.json?key=VTEyqAvEoi2G2xhpCGmi',
-        tileSize: 512,
-    });
-
-    // Create the grey map layer
-    const greyMapLayer = new ol.layer.Tile({
-        source: greyMapSource,
-        visible: false // Initially set to invisible
-    });
-
-    // Add the grey map layer to the map
-    map.addLayer(greyMapLayer);
-
-
-
-    //ADDING FUNCTIONALITIES
-
-    //Pointer
     const pointerElement = document.createElement('i');
     pointerElement.className = 'pointer fa-solid fa-location-dot';
     const pointerOverlay = new ol.Overlay({
@@ -417,18 +287,16 @@
     });
     map.addOverlay(pointerOverlay);
 
-
-    //Drawing mode function
     function toggleDrawing() {
         if (drawingModeActive) {
             // Clear previously drawn features if exiting drawing mode
             drawnFeaturesSource.clear();
             map.removeInteraction(draw);
-            document.getElementById('tekenButton').style.backgroundColor = '';
+            document.getElementById('draw_Button').style.backgroundColor = '';
         } else {
             // Clear previously drawn features if starting a new drawing
             drawnFeaturesSource.clear();
-            document.getElementById('tekenButton').style.backgroundColor = 'green';
+            document.getElementById('draw_Button').style.backgroundColor = 'green';
             initDrawingInteraction();
 
         }
@@ -436,7 +304,7 @@
     }
 
     function initDrawingInteraction() {
-        if (!drawnFeaturesSource || !vectorLayer2 || !map) {
+        if (!drawnFeaturesSource || !feeder_layer || !map) {
             console.error('Missing required sources or map.');
             return;
         }
@@ -473,17 +341,17 @@
             const intersectingFeatures = new Set();
             const polygonExtent = polygonGeometry.getExtent();
 
-            const features = vectorLayer2.getSource().getFeatures();
+            const features = feeder_layer.getSource().getFeatures();
             await Promise.all(features.map(async (feature) => {
                 const featureGeometry = feature.getGeometry();
                 const featureExtent = featureGeometry.getExtent();
                 if (ol.extent.intersects(polygonExtent, featureExtent)) {
                     const layerName = feature.get('LAYER');
-                    const vValue = layerName;
-                    const sValue = await findSValue(vValue);
-                    const edgeFeedersSet = findEdgeFeeders(layerName); // Call the function to find edge feeders
+                    const main_feeder = layerName;
+                    const switches = await find_switches(main_feeder);
+                    const edgeFeedersSet = findEdgeFeeders(main_feeder); // Call the function to find edge feeders
                     const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
-                    let layerData = { layerName: layerName, edgeFeeders: edgeFeeders, Switches: sValue };
+                    let layerData = { layerName: layerName, edgeFeeders: edgeFeeders, Switches: switches };
                     let isNewLayer = true;
                     for (let data of intersectingFeatures) {
                         if (data.layerName === layerName) {
@@ -499,7 +367,7 @@
 
             // Display popup with information about intersecting features
             handlePinClick();
-            const popup2Element = document.querySelector('.popup2');
+            const popupElement = document.querySelector('.popup');
             if (intersectingFeatures.size > 0) {
                 const popupContent = Array.from(intersectingFeatures).map(function(data) {
                     const feederName = data.layerName;
@@ -519,13 +387,13 @@
 
                     return `<h4 style="margin-top: 0;">Location information:</h4><p>Main feeder: ${feederName}</p><p>Edge feeders: ${edgeFeeders}</p><p>Switches: ${switches}</p> ${feedersToTurnOffContent}`;
                 }).join('<hr>'); // Separate feature information with horizontal line
-                popup2Element.innerHTML = popupContent;
+                popupElement.innerHTML = popupContent;
                 // Add the export button separately outside of the mapping function
-                popup2Element.innerHTML += '<button id="exportButton" class="export-button">Export to Word</button>';
+                popupElement.innerHTML += '<button id="exportButton" class="export-button">Export schakelnota</button>';
 
             } else {
                 // If no intersecting features, display a message
-                popup2Element.style.display = 'none';
+                popupElement.style.display = 'none';
             }
 
             // Clear the drawing interaction (but keep it active)
@@ -534,87 +402,140 @@
     }
 
 
-    //Functionality on single map click
-    map.on('click', async function(event) {
-    if (drawingModeActive) {
-        //No functionality yet
-    } else {
+    // Function to display a popup with location information
+    async function displayPopup(coordinates, feature, layer) {
         handlePinClick();
-        const popup2Element = document.querySelector('.popup2');
-        const coordinates = event.coordinate;
-        const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'); // Correct variable name
-        let closestFeature = null;
-        let closestDistance = Infinity; // Initialize with infinity
-        vectorLayer2.getSource().forEachFeature(function(feature) {
-            const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
-            const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
-            const distance = ol.sphere.getDistance(transfcoordinates, featureCoords);
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestFeature = feature;
-            }
-        });
+        const popupElement = document.querySelector('.popup');
+        const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326');
 
-        // Check if distance exceeds the threshold (for example, 1000 meters)
-        if (closestDistance <= 500) {
-            if (closestFeature) {
-                const closestFeatureName = closestFeature.get('LAYER');
-                const lon = transfcoordinates[0];
-                const lat = transfcoordinates[1];
-                const vValue = closestFeatureName;
-                const sValue = await findSValue(vValue);
-                const edgeFeedersSet = findEdgeFeeders(closestFeatureName); // Call the function to find edge feeders
-                const edgeFeeders = [...edgeFeedersSet]; // Convert Set to Array for easier handling
-                // Populate the tsFeederMap object with main and edge feeder names
-                 const tsFeederMap = populateTSFeederMap([closestFeatureName, ...edgeFeeders]);
+        if (feature) {
+            const closestFeatureName = feature.get('LAYER');
+            if (layer === 'feeder_layer') {
+                const main_feeder = closestFeatureName;
+                const switches = await find_switches(main_feeder);
+                const edgeFeedersSet = findEdgeFeeders(main_feeder);
+                const edgeFeeders = [...edgeFeedersSet];
+                const tsFeederMap = populateTSFeederMap([closestFeatureName, ...edgeFeeders]);
 
-                // Generate the "Feeders to turn off" section content
                 let feedersToTurnOffContent = '<p>Feeders to turn off:</p>';
                 for (const tsNumber in tsFeederMap) {
                     const feederList = tsFeederMap[tsNumber].join(', ');
-                    // Include a message for "N/A" TS numbers
                     const tsNumberDisplay = tsNumber !== 'N/A' ? `TS ${tsNumber}` : 'No corresponding TS-number';
                     feedersToTurnOffContent += `<p>${tsNumberDisplay}: ${feederList}</p>`;
                 }
 
-
-                 // Add the generated content to the main content string
                 const content = `<h4 style="margin-top: 0;">Location information:</h4>
-                                 <p>Main feeder: ${closestFeatureName}</p>
-                                 <p>Edge feeders: ${edgeFeeders}</p>
-                                 <p>Switches: ${sValue}</p>
-                                 ${feedersToTurnOffContent}
-                                 <button id="exportButton" class="export-button">Export to Word</button>`;
-                popup2Element.innerHTML = content;
-            } else {
-                const lon = transfcoordinates[0];
-                const lat = transfcoordinates[1];
-                const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
-                popupElement2.innerHTML = content;
+                                <p>Main feeder: ${closestFeatureName}</p>
+                                <p>Edge feeders: ${edgeFeeders}</p>
+                                <p>Switches: ${switches}</p>
+                                ${feedersToTurnOffContent}
+                                <button id="exportButton" class="export-button">Export schakelnota</button>`;
+                popupElement.innerHTML = content;
+
+            // if we are working in the switches_layer, find the closest feeder and start from there to fill the popup
+            } else if (layer === 'switches_layer') {
+                // Find the closest main feeder to the input coordinates
+                let closestMainFeeder = null;
+                let closestDistance = Infinity;
+
+                feeder_layer.getSource().forEachFeature(feederFeature => {
+                    const feederName = feederFeature.get('LAYER');
+                    const feederCoords = feederFeature.getGeometry().getClosestPoint(coordinates);
+                    const distance = ol.sphere.getDistance(transfcoordinates, ol.proj.transform(feederCoords, 'EPSG:3857', 'EPSG:4326'));
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestMainFeeder = feederName;
+                    }
+                });
+                // Display information for the closest main feeder found
+                if (closestMainFeeder) {
+                    const switches = await find_switches(closestMainFeeder);
+                    const edgeFeedersSet = findEdgeFeeders(closestMainFeeder);
+                    const edgeFeeders = [...edgeFeedersSet];
+                    const tsFeederMap = populateTSFeederMap([closestMainFeeder, ...edgeFeeders]);
+
+                    let feedersToTurnOffContent = '<p>Feeders to turn off:</p>';
+                    for (const tsNumber in tsFeederMap) {
+                        const feederList = tsFeederMap[tsNumber].join(', ');
+                        const tsNumberDisplay = tsNumber !== 'N/A' ? `TS ${tsNumber}` : 'No corresponding TS-number';
+                        feedersToTurnOffContent += `<p>${tsNumberDisplay}: ${feederList}</p>`;
+                    }
+
+                    const content = `<h4 style="margin-top: 0;">Location information:</h4>
+                                    <p>Main feeder: ${closestMainFeeder}</p>
+                                    <p>Edge feeders: ${edgeFeeders}</p>
+                                    <p>Switches: ${switches}</p>
+                                    ${feedersToTurnOffContent}
+                                    <button id="exportButton" class="export-button">Export schakelnota</button>`;
+                    popupElement.innerHTML = content;
+                } else {
+                    popupElement.innerHTML = '<p>No main feeder found nearby.</p>';
+                }
             }
         } else {
-            popup2Element.style.display = 'none'; // Hide the popup if distance exceeds threshold
+            const lon = transfcoordinates[0];
+            const lat = transfcoordinates[1];
+            const content = `<p>Latitude: ${lat.toFixed(6)}</p><p>Longitude: ${lon.toFixed(6)}</p>`;
+            popupElement.innerHTML = content;
         }
-    pointerOverlay.setPosition(coordinates);
+
+        placePin(coordinates);
     }
+
+
+    map.on('click', async function(event) {
+        if (drawingModeActive) {
+            //No functionality yet
+        } else {
+            handlePinClick();
+            const coordinates = event.coordinate;
+            const transfcoordinates = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326');
+            let closestFeature = null;
+            let closestDistance = Infinity; // Initialize with infinity
+            feeder_layer.getSource().forEachFeature(function(feature) {
+                const featureCoordinates = feature.getGeometry().getClosestPoint(coordinates);
+                const featureCoords = ol.proj.transform(featureCoordinates, 'EPSG:3857', 'EPSG:4326');
+                const distance = ol.sphere.getDistance(transfcoordinates, featureCoords);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestFeature = feature;
+                }
+            });
+
+            // Check if distance exceeds the threshold (for example, 500 meters)
+            if (closestDistance <= 500) {
+                console.log('Closest Feature:', closestFeature.get('LAYER'));
+                const closestFeatureName = closestFeature ? closestFeature.get('LAYER') : null;
+                await displayPopup(coordinates, closestFeature, 'feeder_layer');
+            } else {
+                popupElement.style.display = 'none'; // Hide the popup if distance exceeds threshold
+            }
+
+        }
     });
 
+
+    //function to place pin
+    function placePin(pinCoordinates) {
+        pointerOverlay.setPosition(pinCoordinates);
+    }
 
     // Function to handle the pin click event
     function handlePinClick() {
         pinClicked = true;
-        const popup2Element = document.getElementById('popup2');
+        const popupElement = document.getElementById('popup');
         if (pinClicked) {
-            popup2Element.style.display = 'block';
+            popupElement.style.display = 'block';
         } else {
-            popup2Element.style.display = 'none';
+            popupElement.style.display = 'none';
         }
     }
 
-    // Define a function to find the TS number for a given feeder name
+    //function to find the TS number for a given feeder name
     function findTSNumber(feederName) {
         // Loop through each feature in the GeoJSON data
-        for (const feature of geojsonSource2.getFeatures()) {
+        for (const feature of Feeders_source.getFeatures()) {
             // Check if the feature's 'LAYER' name matches the given feederName
             if (feature.get('LAYER') === feederName) {
                 // Return the TS number of the matched feature
@@ -646,6 +567,8 @@
         return tsFeederMap; // Return the populated tsFeederMap object
     }
 
+
+
     // Add a click event listener to the pin element
     pointerElement.addEventListener('click', function(event) {
         // Prevent the singleclick event on the map from firing
@@ -660,8 +583,6 @@
         }
     });
 
-
-    //Right mouse click functionality
     map.getViewport().addEventListener('contextmenu', function(event) {
         if (drawingModeActive) {
             // Finish drawing on right-click
@@ -672,19 +593,56 @@
            // Prevent the default context menu from appearing
            event.preventDefault();
            // Hide the pointer
-           pointerOverlay.setPosition(undefined);
-           const popup2Element = document.getElementById('popup2');
-           popup2Element.style.display = 'none';
+           placePin(undefined);
+           const popupElement = document.getElementById('popup');
+           popupElement.style.display = 'none';
         }
     });
     map.addLayer(drawnFeaturesLayer);
+
+    // Object to store the colors for each layer
+    const layerColors = {};
+
+    // Load GeoJSON data for the first layer
+    const Switches_source = new ol.source.Vector({
+        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/Switches_Complete.geojson',
+        format: new ol.format.GeoJSON(),
+        crossOrigin: 'anonymous',
+    });
+
+    // Style for the first layer (dots) with red/green color and label
+    const switches_style = function(feature) {
+        const layerName = feature.get('LAYER'); // Get the name of the layer from the 'LAYER' property;
+        const plaats = feature.get('PLAATS'); // Get the 'PLAATS' attribute
+        const detail = feature.get('DETAIL1');
+        const color = 'red'; // Set color to red
+        // Create style for the feature
+        return new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({
+                    color: color // Use the color
+                }),
+                stroke: new ol.style.Stroke({
+                    color: color, // Use the color
+                    width: 2
+                })
+            }),
+            text: new ol.style.Text({
+                text: map.getView().getZoom() >= 15 ? (map.getView().getZoom() >= 20 ? layerName + (plaats ? ' - ' + plaats : '') + (detail ? ' - ' + detail : '') : layerName) : '', // Show layer name from zoom level 15 and add 'PLAATS' from zoom level 20
+                font: 'bold 12px Calibri,sans-serif',
+                offsetY: -12,
+                fill: new ol.style.Fill({ color: 'black' }) // Use the same color for the label
+            })
+        });
+    };
 
     function findEdgeFeeders(mainFeederName) {
     const edgeFeedersSet = new Set();
 
     // Find all instances of the main feeder
     const mainFeederFeatures = [];
-    vectorLayer2.getSource().forEachFeature(function(feature) {
+    feeder_layer.getSource().forEachFeature(function(feature) {
         const featureName = feature.get('LAYER');
         if (featureName === mainFeederName) {
             mainFeederFeatures.push(feature);
@@ -694,7 +652,7 @@
     // Iterate through main feeder instances and find intersecting edge feeders
     mainFeederFeatures.forEach(function(mainFeederFeature) {
         const mainFeederGeometry = mainFeederFeature.getGeometry();
-        vectorLayer2.getSource().forEachFeature(function(innerFeature) {
+        feeder_layer.getSource().forEachFeature(function(innerFeature) {
             const innerFeatureName = innerFeature.get('LAYER');
             if (innerFeatureName !== mainFeederName && mainFeederGeometry.intersectsExtent(innerFeature.getGeometry().getExtent())) {
                 edgeFeedersSet.add(innerFeatureName); // Add to the Set
@@ -703,47 +661,108 @@
     });
 
     return edgeFeedersSet;
-    }
+}
 
-    function openEditorLoginPage() {
-        window.location.href = "login.html"; // Redirect to the editor login page
-    }
 
-    // Load JSON file from server
-    async function loadJSONFile() {
-        try {
-            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
+    // Load GeoJSON data for the grey map layer
+    const greyMapSource = new ol.source.TileJSON({
+        url: 'https://api.maptiler.com/maps/basic-v2-light/tiles.json?key=VTEyqAvEoi2G2xhpCGmi',
+        tileSize: 512,
+        crossOrigin: 'anonymous',
+    });
+
+    // Create the grey map layer
+    const greyMapLayer = new ol.layer.Tile({
+        source: greyMapSource,
+        visible: false // Initially set to invisible
+    });
+
+    // Add the grey map layer to the map
+    map.addLayer(greyMapLayer);
+
+
+    // Create the first vector layer
+    const switches_layer = new ol.layer.Vector({
+        source: Switches_source,
+        style: switches_style
+    });
+
+    // Add the first vector layer to the mapp
+    map.addLayer(switches_layer);
+
+    // Load GeoJSON data for the second layer
+    const Feeders_source = new ol.source.Vector({
+        url: 'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/Voedingen-stadsplan.geojson',
+        format: new ol.format.GeoJSON(),
+        crossOrigin: 'anonymous',
+    });
+
+
+    // Create the second vector layer without style
+    const feeder_layer = new ol.layer.Vector({
+        source: Feeders_source
+    });
+
+    // Add the second vector layer to the map
+    map.addLayer(feeder_layer);
+
+    // Fetch JSON data from the server
+    fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/Kleuren.json')
+        .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch JSON file');
             }
-            return await response.json();
-        } catch (error) {
-            console.error('Error loading JSON file:', error);
-            throw error;
-        }
-    }
+            return response.json();
+        })
+        .then(data => {
+            // Define a map to store colors for feeders
+            const feederColors = new Map(data.map(entry => [entry.LAYER, entry.COLOR]));
 
-    // Function to find the S-value corresponding to a given V-value
-    async function findSValue(vValue) {
-        try {
-            // Load JSON file from server
-            const response = await fetch('https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/sectieschakelaars.json'); // Update the path as needed
-            if (!response.ok) {
-                throw new Error('Failed to fetch JSON file');
-            }
-            const jsonData = await response.json();
+            // Modified style function to use assigned colors for feeders
+            const feeder_styling = function(feature) {
+                const layerName = feature.get('LAYER'); // Get the name of the feeder from the 'LAYER' property
 
-            // Find the corresponding S-value for the given V-value
-            const sValueRow = jsonData.find(row => row[0] === vValue);
+                // Get color for the current feeder from the map
+                const color = feederColors.get(layerName);
 
-            // Return the S-value if found
-            return sValueRow ? sValueRow[1] : 'Not found';
-        } catch (error) {
+                // If color is found, create style for the feature
+                if (color) {
+                    return new ol.style.Style({
+                        stroke: new ol.style.Stroke({
+                            color: color,
+                            width: 3
+                        }),
+                        text: new ol.style.Text({
+                            text: map.getView().getZoom() >= 15 ? layerName : '', // Show label only from zoom level 15
+                            font: 'bold 12px Calibri,sans-serif',
+                            offsetY: -12,
+                            fill: new ol.style.Fill({ color: 'black' })
+                        })
+                    });
+                } else {
+                    // If color is not found, handle as needed
+                    console.error('Color not found for layer:', layerName);
+                    // You can choose to assign a default color or handle the situation differently
+                    return null;
+                }
+            };
+
+            // Set style function for the vector layer
+            feeder_layer.setStyle(feeder_styling);
+        })
+        .catch(error => {
             console.error('Error reading JSON file:', error);
-            throw error;
-        }
-    }
+            // Handle error here
+        });
 
+    // Troubleshooting: Add an event listener to check for errors
+    feeder_layer.getSource().on('change', function(evt) {
+        if (feeder_layer.getSource().getState() === 'ready') {
+            console.log('Data loaded successfully.');
+        } else if (feeder_layer.getSource().getState() === 'error') {
+            console.error('Error loading data:', feeder_layer.getSource().getLoadingError());
+        }
+    });
 
     // Function to handle layer visibility
     function handleLayerVisibility(layer, checkboxId) {
@@ -753,87 +772,318 @@
         });
     }
 
-    // Function to handle layer opacity
-    function handleLayerOpacity(layer, rangeId) {
-        const rangeInput = document.getElementById(rangeId);
-        rangeInput.addEventListener('input', function() {
-            layer.setOpacity(parseFloat(this.value));
-        });
-        rangeInput.value = String(layer.getOpacity());
-    }
+    const popupElement = document.getElementById('popup');
+popupElement.addEventListener('click', function(event) {
+    if (event.target.id === 'exportButton') {
+        const files = [
+            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voeding%20165.xlsm',
+            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/Voorbeeld%20voeding%20101.xlsm',
+            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20152.xlsm',
+            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%20332.xlsm',
+            'https://raw.githubusercontent.com/XanderPeeters/Schakelboekje/master/voorbeelden%20schakelnota/voeding%2081.xlsm'
+        ];
 
-    const popup2Element = document.getElementById('popup2');
-    popup2Element.addEventListener('click', function(event) {
-        if (event.target.id === 'exportButton') {
-             const content = popup2Element.innerHTML;
-            exportToWord(content);
+        const randomIndex = Math.floor(Math.random() * files.length);
+        const randomFileURL = files[randomIndex];
+
+        // Fetch the file content
+        fetch(randomFileURL)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch file');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create a temporary anchor element to download the file
+                const downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = `Schakelnota_${randomIndex}.xlsm`; // Generate a dynamic filename
+                downloadLink.click();
+            })
+            .catch(error => {
+                console.error('Error fetching file:', error);
+                // Handle error here
+            });
+        const content = popupElement.innerHTML;
+        //exportToExcel(content);
+        // Get the drawn polygon from the drawn features layer if it exists
+        //const drawnPolygon = getDrawnPolygon();
+        //if (drawnPolygon) {
+          //  exportMapImagePolygon(drawnPolygon); // Pass the drawn polygon
+        // } else {
+            // If no drawn polygon exists, export the current map view as an image
+           // exportMapImage();
+        // }
+    }
+});
+
+
+    // Function to get the drawn polygon from the drawn features layer
+function getDrawnPolygon() {
+    const drawnFeatures = drawnFeaturesLayer.getSource().getFeatures();
+    if (drawnFeatures.length > 0) {
+        return drawnFeatures[0].getGeometry(); // Return the geometry of the first feature
+    } else {
+        return null; // Return null if no features are found
+    }
+}
+
+function exportMapImagePolygon(drawnPolygon) {
+    // Find all main feeder features
+    const mainFeederFeatures = [];
+    const mainFeederSections = document.querySelectorAll('.popup p');
+
+    // Clear the drawn features layer
+    drawnFeaturesLayer.getSource().clear();
+
+    mainFeederSections.forEach(section => {
+        if (section.textContent.includes('Main feeder')) {
+            const mainFeederNames = section.textContent
+                .split(': ')[1]
+                .split(', ')
+                .map(name => name.trim());
+
+            // Collect all main feeder features without duplicates
+            mainFeederNames.forEach(mainFeederName => {
+                feeder_layer.getSource().forEachFeature(feature => {
+                    const layerName = feature.get('LAYER');
+                    if (layerName === mainFeederName) {
+                        mainFeederFeatures.push(feature);
+                    }
+                });
+            });
         }
     });
 
+    // Calculate the extent bounding box around all main feeder(s)
+    const mainFeederExtent = ol.extent.createEmpty();
+    mainFeederFeatures.forEach(feature => {
+        ol.extent.extend(mainFeederExtent, feature.getGeometry().getExtent());
+    });
 
-    function exportToWord(content) {
+    // Zoom the map to the extent of the main feeder features
+    map.getView().fit(mainFeederExtent, { duration: 1000 });
 
-        const contentWithoutButton = content.replace('<button id="exportButton" class="export-button">Export to Word</button>', '');
+    // Delay to ensure the map has rendered at the desired zoom level
+    setTimeout(() => {
+        // Get the canvas element within the map viewport
+        const mapCanvas = document.querySelector('.ol-viewport canvas');
 
-        // Create a new Blob object containing the content
-        const blob = new Blob([`<html><body>${contentWithoutButton}</body></html>`], { type: 'application/msword' });
+        // Create an image element
+        const img = new Image();
 
-        // Create a temporary anchor element
-        const anchor = document.createElement('a');
-        anchor.download = 'location_info.doc';
+        // Set the cross-origin attribute to "anonymous"
+        img.crossOrigin = "anonymous";
 
-        // Create a URL for the Blob object
-        anchor.href = URL.createObjectURL(blob);
+        // Set the image source to the data URL of the canvas
+        img.src = mapCanvas.toDataURL('image/png');
 
-        // Append the anchor to the body and programmatically click it to trigger the download
-        document.body.appendChild(anchor);
-        anchor.click();
+        // Create a temporary anchor element to download the image
+        const downloadLink = document.createElement('a');
 
-        // Remove the anchor element after the download
-        document.body.removeChild(anchor);
-    }
+        // Set the href attribute to the image source
+        downloadLink.href = img.src;
 
-    // Function to zoom to a specific location or layer
-    function zoomToLocationOrLayer() {
-        const searchText = document.getElementById('searchInput').value;
-        if (searchText) {
-            let foundLayer2 = false;
-            let foundLayer1 = false;
-            // Check if the search text matches a feature in Layer 2
-            vectorLayer2.getSource().forEachFeature(function(feature) {
-                if (feature.get('LAYER') === searchText) {
-                    const extent = feature.getGeometry().getExtent();
-                    map.getView().fit(extent, { duration: 1000 });
-                    foundLayer2 = true;
-                    return;
+        // Set the download attribute to specify the file name
+        downloadLink.download = 'map_image.png';
+
+        // Click the anchor element to trigger the download
+        downloadLink.click();
+    }, 1500); // Adjust this delay as needed to ensure the map has rendered at the desired zoom level
+}
+
+
+
+
+
+// Function to calculate the bounding box of the main feeder features and zoom to it
+function zoomToMainFeederExtent(mainFeederFeatures) {
+    const mainFeederExtent = ol.extent.createEmpty();
+    mainFeederFeatures.forEach(feature => {
+        ol.extent.extend(mainFeederExtent, feature.getGeometry().getExtent());
+    });
+    // Zoom the map to the calculated extent
+    map.getView().fit(mainFeederExtent, { duration: 1000 });
+}
+
+
+    function exportMapImage() {
+    // Get the current map view
+    const mapView = map.getView();
+
+    // Retrieve the content of the popup
+    const popupContent = document.querySelector('.popup').innerHTML;
+
+    // Create a temporary element to parse the HTML content of the popup
+    const tempElement = document.createElement('div');
+    tempElement.innerHTML = popupContent;
+
+    // Retrieve the main feeder(s) information from the popup content
+    const mainFeederInfo = Array.from(tempElement.querySelectorAll('p')).find(p => p.textContent.includes('Main feeder'));
+    let mainFeederExtent = null;
+
+    if (mainFeederInfo) {
+        // Extract the main feeder name(s)
+        const mainFeederNames = mainFeederInfo.textContent.split(': ')[1].split(', ');
+
+        // Find features corresponding to all instances of the main feeder(s)
+        const mainFeederFeatures = [];
+        mainFeederNames.forEach(name => {
+            feeder_layer.getSource().forEachFeature(feature => {
+                if (feature.get('LAYER') === name) {
+                    mainFeederFeatures.push(feature);
                 }
             });
-            // If not found in Layer 2, check Layer 1
-            if (!foundLayer2) {
-                vectorLayer1.getSource().forEachFeature(function(feature) {
-                    if (feature.get('LAYER') === searchText) {
-                        const extent = feature.getGeometry().getExtent();
-                        map.getView().fit(extent, { duration: 1000 });
-                        foundLayer1 = true;
-                        return;
-                    }
-                });
-            }
-            // If not found in Layer 1, try to geocode the search text as an address
-            if (!foundLayer2 && !foundLayer1) {
-                geocodeAddress(searchText);
-            }
-            // Display error message if nothing is found
-            if (!foundLayer2 && !foundLayer1 && !searchText) {
-                document.getElementById('errorMessage').textContent = 'Voeding, Schakelaar of adres niet gevonden';
-            } else {
-                document.getElementById('errorMessage').textContent = ''; // Clear error message
-            }
-        } else {
-            document.getElementById('errorMessage').textContent = 'Voeding, Schakelaar of adres niet gevonden';
-        }
+        });
+
+        // Calculate the extent bounding box around all main feeder(s)
+        mainFeederExtent = ol.extent.createEmpty();
+        mainFeederFeatures.forEach(feature => {
+            ol.extent.extend(mainFeederExtent, feature.getGeometry().getExtent());
+        });
+
+        // Fit the map view to the calculated extent
+        mapView.fit(mainFeederExtent, { duration: 1000 });
     }
 
+    // Delay to ensure the map has rendered at the new extent
+    setTimeout(() => {
+        // Get the canvas element within the map viewport
+        const mapCanvas = document.querySelector('.ol-viewport canvas');
+
+        // Create a temporary anchor element to download the image
+        const downloadLink = document.createElement('a');
+        downloadLink.href = mapCanvas.toDataURL('image/png');
+        downloadLink.download = 'map_image.png';
+        downloadLink.click();
+
+        // Restore the original map view if main feeder extent was calculated
+        if (mainFeederExtent) {
+            mapView.fit(view.getExtent(), { duration: 1000 });
+        }
+    }, 1500); // Adjust this delay as needed to ensure the map has rendered at the new extent
+}
+
+
+    
+    function exportToExcel() {
+    // Retrieve the content of the popup
+    const popupContent = document.querySelector('.popup').innerText;
+
+    // Split the content by sections
+    const sections = popupContent.split('Location information:');
+
+    // Filter out empty sections
+    const filteredSections = sections.filter(section => section.trim() !== '');
+
+    // Process each section to extract data
+    const data = [];
+    filteredSections.forEach(section => {
+        // Check if section is empty
+        if (section.trim() !== '') {
+            const lines = section.trim().split('\n');
+            const rowData = [];
+            lines.forEach(line => {
+                // Check if line contains label and value
+                if (line.includes(':')) {
+                    const [label, value] = line.split(':');
+                    rowData.push(label.trim(), value.trim());
+                }
+            });
+            // Push rowData to data array if it contains data
+            if (rowData.length > 0) {
+                data.push(rowData);
+            }
+        }
+    });
+
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Convert the data to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Feeder Data');
+
+    // Convert the workbook to a Blob
+    const blob = new Blob([s2ab(XLSX.write(workbook, { type: 'binary' }))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    // Save the Blob as a file using FileSaver.js
+    saveAs(blob, 'feeder_data.xlsx');
+}
+
+    // Utility function to convert array buffer to binary string
+    function s2ab(s) {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff;
+        return buf;
+    }
+
+    //function to zoom to a specific location
+    function zoomToLocationOrLayer(feature) {
+        const extent = feature.getGeometry().getExtent();
+        map.getView().fit(extent, {duration: 1000, maxZoom: 18});
+
+        // Calculate the center of the extent
+        const centerX = (extent[0] + extent[2]) / 2;
+        const centerY = (extent[1] + extent[3]) / 2;
+        const centerCoordinates = [centerX, centerY];
+        return centerCoordinates;
+    }
+        
+
+    // Function to zoom to a specific location or layer
+    async function searchLayerFeatureOrAddress() {
+        const searchText = document.getElementById('searchInput').value;
+        if (!searchText) {
+            document.getElementById('errorMessage').textContent = 'Voeding, Schakelaar of adres niet gevonden';
+            return;
+        }
+        
+        const layers = [
+            { layer: feeder_layer, name: 'feeder_layer' },
+            { layer: switches_layer, name: 'switches_layer' }
+        ];
+
+        let found = false;
+        let wronginput = false;
+
+
+        for (const { layer, name } of layers) {
+            layer.getSource().forEachFeature(feature => {
+                if (feature.get('LAYER') === searchText) {
+                    zoomToLocationOrLayer(feature);
+                    const centerCoordinates = zoomToLocationOrLayer(feature);
+                    const currentLayer = name;
+                    placePin(centerCoordinates);
+                    displayPopup(centerCoordinates, feature, currentLayer);
+                    found = true;
+                    return;
+                } else {
+                    wronginput = true;
+                }
+            });
+        };
+
+        if (!found) {
+            geocodeAddress(searchText)
+        } 
+        if (!found && !wronginput) {
+            geocodeAddress(searchText)
+            //remove popup in this condition 
+            const popupElement = document.getElementById('popup');
+            popupElement.style.display = 'none';   
+        } else if (!found && wronginput) {
+            document.getElementById('errorMessage').textContent = ''; // Clear error message
+            const popupElement = document.getElementById('popup');     
+        } else {
+            document.getElementById('errorMessage').textContent = ''; // Clear error message
+            const popupElement = document.getElementById('popup');
+        }
+    }
 
     // Function to geocode an address and zoom to its location
     function geocodeAddress(address) {
@@ -851,7 +1101,7 @@
                     const coordinates = [parseFloat(location.lon), parseFloat(location.lat)];
                     map.getView().animate({ center: ol.proj.fromLonLat(coordinates), zoom: 18, duration: 1000 });
                 } else {
-                    alert('Address not found!');
+                    alert('Voeding, schakelaar of adres niet gevonden!');
                 }
             })
             .catch(function(error) {
@@ -859,30 +1109,56 @@
             });
     }
 
+
     function reloadPage() {
         location.reload();
     }
 
+    document.addEventListener('DOMContentLoaded', function () {
+        const metroSwitch = document.getElementById('metroSwitch');
+        const bovengrondsSwitch = document.getElementById('bovengrondsSwitch');
 
+        metroSwitch.addEventListener('change', function () {
+            updateSwitchesVisibility();
+        });
+
+        bovengrondsSwitch.addEventListener('change', function () {
+            updateSwitchesVisibility();
+        });
+
+        function updateSwitchesVisibility() {
+            const metroVisible = metroSwitch.checked;
+            const bovengrondsVisible = bovengrondsSwitch.checked;
+
+            // Loop through all features and update visibility based on checkbox state
+            Switches_source.getFeatures().forEach(function (feature) {
+                const metro = feature.get('metro?');
+                if ((metro === 'metro' && metroVisible) || (metro === 'boven' && bovengrondsVisible)) {
+                    feature.setStyle(null); // Show the feature
+                } else {
+                    feature.setStyle(new ol.style.Style({ // Hide the feature
+                        fill: new ol.style.Fill({
+                            color: 'rgba(255, 255, 255, 0)'
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: 'rgba(255, 255, 255, 0)'
+                        })
+                    }));
+                }
+            });
+        }
+    });
 
 
     // Handle visibility for OSM layer
-    handleLayerVisibility(map.getLayers().item(0), 'visible0');
-
-    // Handle visibility for QGIS layer 1
-    handleLayerVisibility(vectorLayer1, 'visible1');
+    handleLayerVisibility(map.getLayers().item(0), 'visible_map');
 
     // Handle visibility for QGIS layer 2
-    handleLayerVisibility(vectorLayer2, 'visible2');
+    handleLayerVisibility(feeder_layer, 'visible2');
 
     // Handle visibility for greylayer
     handleLayerVisibility(greyMapLayer, 'visibleGrey');
-
-    // Handle opacity for QGIS layer 1
-    handleLayerOpacity(vectorLayer1, 'opacity1');
-
-    // Handle opacity for QGIS layer 2
-    handleLayerOpacity(vectorLayer2, 'opacity2');
+    
 </script>
 </body>
 </html>
